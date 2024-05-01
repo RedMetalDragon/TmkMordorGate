@@ -6,6 +6,7 @@ public static class InitialServicesConfig
 
     public static void ConfigureInitialServices(this WebApplicationBuilder builder)
     {
+        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
         // Rate limiting configuration
         builder.Services.AddRateLimiter(rateLimiterOptions => {
             rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>{
@@ -13,7 +14,6 @@ public static class InitialServicesConfig
                 options.PermitLimit = 10;
             });
         });
-        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
         builder.Services.AddEndpointsApiExplorer();
     }
 

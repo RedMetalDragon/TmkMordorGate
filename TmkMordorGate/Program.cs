@@ -1,41 +1,19 @@
 using TmkMordorGate;
 
 var builder = WebApplication.CreateBuilder(args);
+InitialServicesConfig.ConfigureInitialServices(builder);
 
 var app = builder.Build();
-
-
-
 if (app.Environment.IsDevelopment())
 {
-    InitialServicesConfig.ConfigureInitialServices(builder);
     // Register the rate limiter middleware
-    app.UseRateLimiter();
-
+    
 }
 
 // Configure the HTTP request pipeline.
+app.UseRateLimiter();
 app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
+app.MapReverseProxy();
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
