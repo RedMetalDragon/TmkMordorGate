@@ -2,15 +2,19 @@ using TmkMordorGate;
 
 var builder = WebApplication.CreateBuilder(args);
 
-InitialServicesConfig.ConfigureInitialServices(builder);
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+
+
 if (app.Environment.IsDevelopment())
 {
+    InitialServicesConfig.ConfigureInitialServices(builder);
+    // Register the rate limiter middleware
+    app.UseRateLimiter();
 
 }
 
+// Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
 
 var summaries = new[]

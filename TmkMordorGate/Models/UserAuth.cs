@@ -1,25 +1,13 @@
-﻿namespace TmkMordorGate;
+﻿namespace TmkMordorGate.Models;
 
-public class UserAuth
+public class UserAuth(int authID, string? emailAddress, int userID, int customerId, string? salt, string? passwordHash, int roleId)
 {
 
-    public readonly int AuthID;
-    public readonly string? EmailAddress;
-    public readonly int UserID;
-    public readonly int CustomerId;
-    public readonly string? Salt;
-    public readonly string? PasswordHash;
-    public readonly int RoleId;
-
-    public UserAuth(int authID, string? emailAddress, int userID, int customerId, string? salt, string? passwordHash, int roleId)
-    {
-        AuthID = authID;
-        EmailAddress = emailAddress;
-        UserID = userID;
-        CustomerId = customerId;
-        Salt = salt;
-        PasswordHash = passwordHash;
-        RoleId = roleId;
-    }
-
+    public readonly int AuthID = authID;
+    public readonly string? EmailAddress = emailAddress;
+    public readonly int UserID = userID;
+    public readonly int CustomerId = customerId;
+    public readonly string? Salt = salt;
+    public readonly string? PasswordHash = passwordHash;
+    public readonly int RoleId = roleId;
 }
