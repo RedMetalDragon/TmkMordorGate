@@ -22,7 +22,10 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ github.event.inputs.branch || github.ref }}
-    
+
+    - name: List files in TmkMordorGate
+      run: ls -l ./TmkMordorGate/
+
     - name: Validate tag version
       id: check-condition
       run: |
