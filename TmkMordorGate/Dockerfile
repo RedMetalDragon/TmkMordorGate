@@ -6,7 +6,7 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 # Ensure you are copying the csproj file from the correct subdirectory
-COPY ["TmkMordorGate/TmkMordorGate.csproj", "./"]
+COPY ["TmkMordorGate.csproj", "./"]
 RUN dotnet restore "TmkMordorGate.csproj"
 
 # Copy the rest of your source code from the TmkMordorGate directory
