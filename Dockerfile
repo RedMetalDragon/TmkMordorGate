@@ -6,13 +6,12 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy the csproj file and restore any dependencies (via NuGet)
-COPY ["/TmkMordorGate/TmkMordorGate.csproj", "TmkMordorGate/"]
+COPY ["TmkMordorGate/TmkMordorGate/TmkMordorGate.csproj", "TmkMordorGate/"]
 RUN dotnet restore "TmkMordorGate/TmkMordorGate.csproj"
 
-# Copy the project files and build the application
-COPY ["/TmkMordorGate/", "TmkMordorGate/"]
+COPY ["TmkMordorGate/TmkMordorGate/", "TmkMordorGate/"]
 RUN dotnet build "TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/build
+
 
 
 
