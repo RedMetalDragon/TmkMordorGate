@@ -6,10 +6,10 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY ["TmkMordorGate/TmkMordorGate/TmkMordorGate.csproj", "TmkMordorGate/"]
+COPY ["./TmkMordorGate/TmkMordorGate.csproj", "TmkMordorGate/"]
 RUN dotnet restore "TmkMordorGate/TmkMordorGate.csproj"
 
-COPY ["TmkMordorGate/TmkMordorGate/", "TmkMordorGate/"]
+COPY ["./TmkMordorGate/", "TmkMordorGate/"]
 RUN dotnet build "TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/build
 
 
