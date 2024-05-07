@@ -78,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./TmkMordorGate/
-          file: Dockerfile
+          file: ./TmkMordorGate/Dockerfile
           platforms: linux/amd64,linux/arm64 # Specify the platforms
           push: true
           tags: |
