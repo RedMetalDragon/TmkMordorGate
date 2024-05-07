@@ -1,4 +1,6 @@
 # Base image for runtime
+# We need to fix the issues related to the arm64 architecture and the .NET 8.0 SDK image.
+# There are something broken
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 
