@@ -10,7 +10,7 @@ if (app.Environment.IsDevelopment())
     
 }
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.MapReverseProxy();
