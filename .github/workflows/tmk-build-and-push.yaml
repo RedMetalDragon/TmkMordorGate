@@ -23,8 +23,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
-      - name: List files in TmkMordorGate
-        run: ls -l ./TmkMordorGate/
+      - name: List files in root directory
+        run: ls -l ./
 
       - name: Validate tag version
         id: check-condition
@@ -77,8 +77,8 @@ jobs:
         if: env.proceed == 'true'
         uses: docker/build-push-action@v5
         with:
-          context: ./TmkMordorGate/
-          file: ./TmkMordorGate/Dockerfile
+          context: ./ # Path to the Dockerfile
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64 # Specify the platforms
           push: true
           tags: |
