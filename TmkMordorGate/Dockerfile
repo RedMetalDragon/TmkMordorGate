@@ -11,8 +11,6 @@ RUN dotnet restore "TmkMordorGate.csproj"
 COPY . .
 RUN dotnet build "TmkMordorGate.csproj" -c Release -o /app/build
 
-ARG ENVIRONMENT=Production
-COPY ["appsettings.${ENVIRONMENT}.json", "/app/appsettings.json"]
 
 FROM build AS publish
 RUN dotnet publish "TmkMordorGate.csproj" -c Release -o /app/publish
