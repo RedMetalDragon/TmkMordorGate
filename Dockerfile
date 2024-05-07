@@ -6,18 +6,18 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY ["./TmkMordorGate/TmkMordorGate.csproj", "TmkMordorGate/"]
-RUN dotnet restore "TmkMordorGate/TmkMordorGate.csproj"
+COPY ["./TmkMordorGate/TmkMordorGate.csproj", "/TmkMordorGate/"]
+RUN dotnet restore "/TmkMordorGate/TmkMordorGate.csproj"
 
-COPY ["./TmkMordorGate/", "TmkMordorGate/"]
-RUN dotnet build "TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/build
+COPY ["./TmkMordorGate/", "/TmkMordorGate/"]
+RUN dotnet build "/TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/build
 
 
 
 
 # Publish the application
 FROM build AS publish
-RUN dotnet publish "TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/publish
+RUN dotnet publish "/TmkMordorGate/TmkMordorGate.csproj" -c Release -o /app/publish
 
 # Final stage / runtime image
 FROM base AS final
