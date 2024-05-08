@@ -1,4 +1,7 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
 
 namespace TmkMordorGate;
 public static class InitialServicesConfig
@@ -6,6 +9,7 @@ public static class InitialServicesConfig
 
     public static void ConfigureInitialServices(this WebApplicationBuilder builder)
     {
+        builder.Services.AddHealthChecks().AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         // Configure services based on the environment
         if (builder.Environment.IsDevelopment())
         {

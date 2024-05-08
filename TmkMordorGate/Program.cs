@@ -13,7 +13,9 @@ if (app.Environment.IsDevelopment())
 // Configure the HTTP request pipeline
 app.UseRateLimiter();
 app.UseHttpsRedirection();
+app.MapHealthChecks("/health");
 app.MapReverseProxy();
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
