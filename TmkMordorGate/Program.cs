@@ -7,7 +7,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     // Register the rate limiter middleware
-    
+
 }
 
 // Configure the HTTP request pipeline
