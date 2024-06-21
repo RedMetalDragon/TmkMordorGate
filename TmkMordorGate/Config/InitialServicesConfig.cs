@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TmkMordorGate.Services;
 
@@ -46,15 +47,16 @@ public static class InitialServicesConfig
                 // Retrieve HTTPS configuration from MordorConfigurationService within the scope
                 var configService = builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>();
                 var certPath = configService.GetConfigurationValue("Certificate:Path");
-                var certPassword = configService.GetConfigurationValue("Certificate:Password");
+                var keyPath = configService.GetConfigurationValue("Certificate:Key:Path");
 
-                if (string.IsNullOrEmpty(certPath) || string.IsNullOrEmpty(certPassword))
+                if (string.IsNullOrEmpty(certPath) || string.IsNullOrEmpty(keyPath))
                 {
                     // Log exception using Serilog
                     throw new FieldAccessException("Invalid certPath or certPassword");
                 }
                 // Apply HTTPS configuration
-                listenOptions.UseHttps(certPath, certPassword);
+                var cert = new X509Certificate2(certPath, keyPath);
+                listenOptions.UseHttps(cert);
             });
         });
     }
