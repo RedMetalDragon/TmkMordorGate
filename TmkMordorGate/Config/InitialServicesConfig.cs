@@ -38,27 +38,6 @@ public static class InitialServicesConfig
             });
         });
         builder.Services.AddEndpointsApiExplorer();
-
-
-        // builder.WebHost.ConfigureKestrel((context, options) =>
-        // {
-        //     options.ListenAnyIP(5100, listenOptions =>
-        //     {
-        //         // Retrieve HTTPS configuration from MordorConfigurationService within the scope
-        //         var configService = builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>();
-        //         var certPath = configService.GetConfigurationValue("Certificate:Path");
-        //         var keyPath = configService.GetConfigurationValue("Certificate:Key:Path");
-
-        //         if (string.IsNullOrEmpty(certPath) || string.IsNullOrEmpty(keyPath))
-        //         {
-        //             // Log exception using Serilog
-        //             throw new FieldAccessException("Invalid certPath or certPassword");
-        //         }
-        //         // Apply HTTPS configuration
-        //         var cert = new X509Certificate2(certPath, keyPath);
-        //         listenOptions.UseHttps(cert);
-        //     });
-        // });
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
