@@ -2,12 +2,11 @@ using TmkMordorGate;
 
 var builder = WebApplication.CreateBuilder(args);
 InitialServicesConfig.ConfigureInitialServices(builder);
-
+Console.WriteLine(builder.Environment.EnvironmentName);
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     // Register the rate limiter middleware
-
 }
 
 // Configure the HTTP request pipeline

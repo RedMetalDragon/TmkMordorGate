@@ -16,9 +16,11 @@ public static class InitialServicesConfig
         if (builder.Environment.IsDevelopment())
         {
             ConfigureDevelopmentServices(builder);
+            builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
         }
         else
         {
+            builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
             ConfigureProductionServices(builder);
         }
 
