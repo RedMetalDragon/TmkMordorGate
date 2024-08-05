@@ -21,7 +21,7 @@ public static class InitialServicesConfig
         else
         {
             builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
-            ConfigureProductionServices(builder);
+           ConfigureProductionServices(builder);
         }
 
     }
