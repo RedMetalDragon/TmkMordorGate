@@ -2,7 +2,6 @@ using TmkMordorGate;
 
 var builder = WebApplication.CreateBuilder(args);
 InitialServicesConfig.ConfigureInitialServices(builder);
-Console.WriteLine(builder.Environment.EnvironmentName);
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
@@ -14,4 +13,5 @@ app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.MapHealthChecks("/health");
 app.MapReverseProxy();
+InitialServicesConfig.ConfigurePipelineToSetupHeadersForGandalfService(app);
 app.Run();

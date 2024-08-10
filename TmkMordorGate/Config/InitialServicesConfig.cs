@@ -40,6 +40,7 @@ public static class InitialServicesConfig
             });
         });
         builder.Services.AddEndpointsApiExplorer();
+        
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
@@ -57,4 +58,23 @@ public static class InitialServicesConfig
         builder.Services.AddEndpointsApiExplorer();
     }
 
+    public static void ConfigurePipelineToSetupHeadersForGandalfService(IApplicationBuilder app)
+    {
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapReverseProxy(proxyPipeline =>
+            {
+                proxyPipeline.Use(async (context, next) =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api/v1/gandalf/"))
+                    {
+                        context.Request.Headers.Append("X-Tier", "Free");
+                    }
+
+                    await next();
+                });
+            });
+        });
+    }
 }
