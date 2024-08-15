@@ -1,9 +1,8 @@
 ﻿using TmkMordorGate.Interfaces;
 using TmkMordorGate.Models;
-using System;
-
 
 namespace TmkMordorGate.Services;
+
 public class CustomerAuthService : ICustomerAuthService
 {
     public Task<AuthenticadedResponse> Authenticate(AuthenticatedRequest model)
@@ -35,5 +34,4 @@ public class CustomerAuthService : ICustomerAuthService
     {
         throw new NotImplementedException();
     }
-
 }
