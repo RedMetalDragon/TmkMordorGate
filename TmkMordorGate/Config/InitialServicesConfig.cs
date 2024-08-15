@@ -16,10 +16,12 @@ public static class InitialServicesConfig
         if (builder.Environment.IsDevelopment())
         {
             ConfigureDevelopmentServices(builder);
+            builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
         }
         else
         {
-            ConfigureProductionServices(builder);
+            builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
+           ConfigureProductionServices(builder);
         }
 
     }
@@ -38,27 +40,7 @@ public static class InitialServicesConfig
             });
         });
         builder.Services.AddEndpointsApiExplorer();
-
-
-        builder.WebHost.ConfigureKestrel((context, options) =>
-        {
-            options.ListenAnyIP(5100, listenOptions =>
-            {
-                // Retrieve HTTPS configuration from MordorConfigurationService within the scope
-                var configService = builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>();
-                var certPath = configService.GetConfigurationValue("Certificate:Path");
-                var keyPath = configService.GetConfigurationValue("Certificate:Key:Path");
-
-                if (string.IsNullOrEmpty(certPath) || string.IsNullOrEmpty(keyPath))
-                {
-                    // Log exception using Serilog
-                    throw new FieldAccessException("Invalid certPath or certPassword");
-                }
-                // Apply HTTPS configuration
-                var cert = new X509Certificate2(certPath, keyPath);
-                listenOptions.UseHttps(cert);
-            });
-        });
+        
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
@@ -76,4 +58,23 @@ public static class InitialServicesConfig
         builder.Services.AddEndpointsApiExplorer();
     }
 
+    public static void ConfigurePipelineToSetupHeadersForGandalfService(IApplicationBuilder app)
+    {
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapReverseProxy(proxyPipeline =>
+            {
+                proxyPipeline.Use(async (context, next) =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api/v1/gandalf/"))
+                    {
+                        context.Request.Headers.Append("X-Tier", "Free");
+                    }
+
+                    await next();
+                });
+            });
+        });
+    }
 }
