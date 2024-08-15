@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TmkMordorGate.Services;
 
 
 namespace TmkMordorGate;
@@ -14,10 +16,12 @@ public static class InitialServicesConfig
         if (builder.Environment.IsDevelopment())
         {
             ConfigureDevelopmentServices(builder);
+            builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
         }
         else
         {
-            ConfigureProductionServices(builder);
+            builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
+           ConfigureProductionServices(builder);
         }
 
     }
@@ -26,6 +30,7 @@ public static class InitialServicesConfig
     {
         builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
         // Rate limiting configuration
+        builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
         builder.Services.AddRateLimiter(rateLimiterOptions =>
         {
             rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
@@ -35,6 +40,7 @@ public static class InitialServicesConfig
             });
         });
         builder.Services.AddEndpointsApiExplorer();
+        
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
@@ -52,4 +58,23 @@ public static class InitialServicesConfig
         builder.Services.AddEndpointsApiExplorer();
     }
 
+    public static void ConfigurePipelineToSetupHeadersForGandalfService(IApplicationBuilder app)
+    {
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapReverseProxy(proxyPipeline =>
+            {
+                proxyPipeline.Use(async (context, next) =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api/v1/gandalf/"))
+                    {
+                        context.Request.Headers.Append("X-Tier", "Free");
+                    }
+
+                    await next();
+                });
+            });
+        });
+    }
 }
