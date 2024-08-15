@@ -1,15 +1,9 @@
-﻿using System.Net;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TmkMordorGate.Middlewares;
 using TmkMordorGate.Services;
-using Yarp.ReverseProxy.Configuration;
-using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.LoadBalancing;
-using Yarp.ReverseProxy.Model;
-using DestinationConfig = Yarp.ReverseProxy.Configuration.DestinationConfig;
+using Yarp.ReverseProxy.Transforms;
 
 namespace TmkMordorGate.Config;
 
@@ -60,25 +54,11 @@ public static class InitialServicesConfig
         });
         builder.Services.AddEndpointsApiExplorer();
     }
-
-    private static void ConfigureProductionServices(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-        // Rate limiting configuration
-        builder.Services.AddRateLimiter(rateLimiterOptions =>
-        {
-            rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
-            {
-                options.Window = TimeSpan.FromSeconds(10);
-                options.PermitLimit = 10;
-            });
-        });
-        builder.Services.AddEndpointsApiExplorer();
-    }
-
+    
     private static void ConfigureLocalServices(this WebApplicationBuilder builder)
     {
         // Load the reverse proxy configuration from the appsettings.Local.json file
+        // and add the path prefix and request transform for the Gandalf service
         builder.Services.AddReverseProxy()
             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
@@ -102,32 +82,28 @@ public static class InitialServicesConfig
         builder.Services.AddEndpointsApiExplorer();
     }
 
+    private static void ConfigureProductionServices(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+        // Rate limiting configuration
+        builder.Services.AddRateLimiter(rateLimiterOptions =>
+        {
+            rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
+            {
+                options.Window = TimeSpan.FromSeconds(10);
+                options.PermitLimit = 10;
+            });
+        });
+        builder.Services.AddEndpointsApiExplorer();
+    }
+
     public static void TmkConfigureMiddleWares(this IApplicationBuilder app)
     {
         app.UseRouting();
         app.UseHttpsRedirection();
-        app.TmkConfigureHeadersForGandalfService();
+        app.UseSetHeaderInGandalfMiddleware();
     }
-
     #region Private
-
-    private static void TmkConfigureHeadersForGandalfService(this IApplicationBuilder app)
-    {
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapReverseProxy(proxyPipeline =>
-            {
-                proxyPipeline.Use(async (context, next) =>
-                {
-                    if (context.Request.Path.Value != null && context.Request.Path.Value.Contains("/api/v1/gandalf/"))
-                    {
-                        context.Request.Headers.Append("X-Tier", "Free");
-                    }
-                    await next();
-                });
-            });
-        });
-    }
 
     // This method is used to determine if the application is running in a local development environment
     private static bool IsLocalDevelopmentRun(this WebApplicationBuilder app)
