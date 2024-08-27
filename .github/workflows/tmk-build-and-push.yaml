@@ -83,6 +83,7 @@ jobs:
           push: true
           tags: |
             marcoguerod/tmkmordorgate-amd64:${{ github.event.inputs.tag || env.IMAGE_TAG }}
+            marcoguerod/tmkmordorgate-arm64:${{ github.event.inputs.tag || env.IMAGE_TAG }}
 
       - name: Logout from Docker
         if: steps.check-condition.outputs.proceed == 'true'
