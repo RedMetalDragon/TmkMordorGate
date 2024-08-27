@@ -1,5 +1,6 @@
-﻿namespace TmkMordorGate.Interfaces;
-using TmkMordorGate.Models;
+﻿using TmkMordorGate.Models;
+
+namespace TmkMordorGate.Interfaces;
 
 public interface ICustomerAuthService
 {
@@ -9,5 +10,4 @@ public interface ICustomerAuthService
     Task<UserAuth> Create(AuthenticatedRequest model);
     Task Update(int id, AuthenticatedRequest model);
     Task Delete(int id);
-
 }
