@@ -79,10 +79,10 @@ jobs:
         with:
           context: ./ # Path to the Dockerfile
           file: ./Dockerfile
-          platforms: linux/amd64 #Specify the platforms linux/arm64 
+          platforms: linux/amd64,linux/arm64 #Specify the platforms linux/arm64 
           push: true
           tags: |
-            marcoguerod/tmkmordorgate-amd64:${{ github.event.inputs.tag || env.IMAGE_TAG }}
+            marcoguerod/tmkmordorgate:${{ github.event.inputs.tag || env.IMAGE_TAG }}
 
       - name: Logout from Docker
         if: steps.check-condition.outputs.proceed == 'true'

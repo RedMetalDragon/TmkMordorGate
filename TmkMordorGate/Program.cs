@@ -1,24 +1,12 @@
 using TmkMordorGate;
+using TmkMordorGate.Config;
+using Yarp.ReverseProxy.LoadBalancing;
 
+//Program.cs
 var builder = WebApplication.CreateBuilder(args);
-InitialServicesConfig.ConfigureInitialServices(builder);
-
+builder.ConfigureInitialServices();
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
-{
-    // Register the rate limiter middleware
-
-}
-
-// Configure the HTTP request pipeline
-app.UseRateLimiter();
-app.UseHttpsRedirection();
+app.TmkConfigureMiddleWares();
 app.MapHealthChecks("/health");
 app.MapReverseProxy();
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
