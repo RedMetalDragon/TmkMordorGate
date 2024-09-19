@@ -114,7 +114,7 @@ jobs:
           "headers": {
             "Authorization": "FunctionKey $FUNCTION_KEY"
           },
-          "body": "{\"tmk-service-version-tags-vs-staging\": \"tmkmordorgate\", \"currentTag\": \"${{ github.event.inputs.branch || github.ref }}\"}"
+          "body": "{\"tmk-service-version-tags-vs-staging\": \"tmkmordorgate\", \"lastBuildTag\": \"${{ github.event.inputs.branch || github.ref }}\"}"
           }
           EOF
      
