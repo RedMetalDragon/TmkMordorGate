@@ -87,3 +87,46 @@ jobs:
       - name: Logout from Docker
         if: steps.check-condition.outputs.proceed == 'true'
         run: docker logout
+
+  update-lambda:
+    name: Update Lambda function
+    needs: build-and-push
+    environment: staging
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Install AWS CLI
+        run: sudo apt-get install awscli -y
+
+      - name: Define payload
+        env:
+          FUNCTION_KEY: ${{ secrets.LAMBDA_FUNCTION_KEY }}
+        run: |
+          cat <<EOF > payload.json
+          {
+          "httpMethod": "POST",
+          "path": "/submit-tag",
+          "headers": {
+            "Authorization": "FunctionKey $FUNCTION_KEY"
+          },
+          "body": "{\"tmk-service-version-tags-vs-staging\": \"tmkmordorgate\", \"lastBuildTag\": \"${{ github.event.inputs.branch || github.ref }}\"}"
+          }
+          EOF
+     
+      - name: Invoke Lambda function
+        run: |
+          aws lambda invoke \
+            --function-name tmk-dashboard-staging \
+            --payload file://payload.json \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          cat response.json  # Show the Lambda response in the logs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
