@@ -1,5 +1,9 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using TmkMordorGate.Middlewares;
 using TmkMordorGate.Services;
 using Yarp.ReverseProxy.LoadBalancing;
@@ -11,14 +15,12 @@ public static class InitialServicesConfig
 {
     public static void ConfigureInitialServices(this WebApplicationBuilder builder)
     {
-        
         builder.Services.AddHealthChecks()
             .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddHttpClient();
-
         // Configure services based on the environment
         // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable
-        
+
         if (IsLocalDevelopmentRun(builder))
         {
             Console.WriteLine("Local development environment detected");
@@ -28,8 +30,9 @@ public static class InitialServicesConfig
 
         else if (builder.Environment.IsDevelopment())
         {
-            ConfigureDevelopmentServices(builder);
             builder.Configuration.AddJsonFile("appsettings.Development.json", true, true);
+            Console.WriteLine("Development environment detected");
+            ConfigureDevelopmentServices(builder);
         }
 
         else
@@ -54,7 +57,7 @@ public static class InitialServicesConfig
         });
         builder.Services.AddEndpointsApiExplorer();
     }
-    
+
     private static void ConfigureLocalServices(this WebApplicationBuilder builder)
     {
         // Load the reverse proxy configuration from the appsettings.Local.json file
@@ -80,6 +83,34 @@ public static class InitialServicesConfig
         });
 
         builder.Services.AddEndpointsApiExplorer();
+
+        // Register the JWT Authentication
+        builder.Services.AddAuthentication(schema =>
+        {
+            schema.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            schema.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            schema.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        }).AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "https://localhost:4430",
+                ValidAudience = "https://localhost:4430/api/v1",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Services
+                    .BuildServiceProvider().GetRequiredService<IMordorConfigurationService>()
+                    .GetConfigurationValue("JwtKey")))
+            };
+        });
+
+        // Register the JWT Authorization
+        builder.Services.AddAuthorizationBuilder().AddPolicy("JwtBearer", policy =>
+        {
+            policy.RequireAuthenticatedUser(); // Requires valid JWT
+        });
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
@@ -101,8 +132,10 @@ public static class InitialServicesConfig
     {
         app.UseRouting();
         app.UseHttpsRedirection();
+        app.UseMiddleware<CustomAuthenticationMiddleware>();
         app.UseSetHeaderInGandalfMiddleware();
     }
+
     #region Private
 
     // This method is used to determine if the application is running in a local development environment
@@ -111,6 +144,6 @@ public static class InitialServicesConfig
         var env = app.Environment;
         return env.EnvironmentName == "Local";
     }
-    
+
     #endregion
 }

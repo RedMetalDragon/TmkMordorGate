@@ -1,8 +1,5 @@
 using Yarp.ReverseProxy.Configuration;
-using Yarp.ReverseProxy.LoadBalancing;
-using System.Collections.Generic;
 using System.Net;
-using System.Runtime.CompilerServices;
 using DestinationConfig = Yarp.ReverseProxy.Configuration.DestinationConfig;
 
 namespace TmkMordorGate.Services;
@@ -10,6 +7,10 @@ namespace TmkMordorGate.Services;
 public interface IMordorConfigurationService
 {
     string GetConfigurationValue(string key);
+
+    IEnumerable<string> GetArrayOfConfigurationValue(string arrayKeyPrefix);
+
+    IEnumerable<string> GetAllKeys();
 }
 
 public interface IMordorPickerDestinationsService
@@ -101,6 +102,7 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
                 }
             }
         }
+
         return availableDestinations;
     }
 
@@ -132,5 +134,23 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
         {
             return false;
         }
+    }
+
+    /// <summary>
+    ///    The GetArrayOfConfigurationValue function retrieves an array of configuration values by key prefix.
+    /// </summary>
+    public IEnumerable<string> GetArrayOfConfigurationValue(string arrayKeyPrefix)
+    {
+        var allConfigKeys = GetAllKeys();
+        var arrayKeys = allConfigKeys.Where(x => x.StartsWith(arrayKeyPrefix));
+        return arrayKeys.Select(GetConfigurationValue);
+    }
+
+    /// <summary>
+    ///   The GetAllKeys function retrieves all keys from the configuration.
+    /// </summary>
+    public IEnumerable<string> GetAllKeys()
+    {
+        return _configuration.AsEnumerable().Select(x => x.Key);
     }
 }
