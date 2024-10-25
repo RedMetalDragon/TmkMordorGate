@@ -1,5 +1,7 @@
 using Yarp.ReverseProxy.Configuration;
 using System.Net;
+using TmkMordorGate.Config;
+using TmkMordorGate.Models.Enums;
 using DestinationConfig = Yarp.ReverseProxy.Configuration.DestinationConfig;
 
 namespace TmkMordorGate.Services;
@@ -11,6 +13,8 @@ public interface IMordorConfigurationService
     IEnumerable<string> GetArrayOfConfigurationValue(string arrayKeyPrefix);
 
     IEnumerable<string> GetAllKeys();
+
+    DatabaseSettings GetDatabaseSettings();
 }
 
 public interface IMordorPickerDestinationsService
@@ -152,5 +156,16 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
     public IEnumerable<string> GetAllKeys()
     {
         return _configuration.AsEnumerable().Select(x => x.Key);
+    }
+    public DatabaseSettings GetDatabaseSettings()
+    {
+        return new DatabaseSettings
+        {
+            DatabaseName = GetConfigurationValue("_database_DatabaseName"),
+            Host = GetConfigurationValue("_database_Host"),
+            Port = GetConfigurationValue("_database_Port"),
+            Username = GetConfigurationValue("_database_Username"),
+            Password = GetConfigurationValue("_database_Password")
+        };
     }
 }

@@ -1,9 +1,11 @@
 ﻿using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using TmkMordorGate.DbContext;
 using TmkMordorGate.Middlewares;
 using TmkMordorGate.Services;
 using Yarp.ReverseProxy.LoadBalancing;
@@ -104,6 +106,14 @@ public static class InitialServicesConfig
                     .BuildServiceProvider().GetRequiredService<IMordorConfigurationService>()
                     .GetConfigurationValue("JwtKey")))
             };
+        });
+
+
+        builder.Services.AddDbContext<TimeKeeperDbContext>((serviceProvider, options) =>
+        {
+            var mordorConfigurationService = serviceProvider.GetRequiredService<IMordorConfigurationService>();
+            var dbSettings = mordorConfigurationService.GetDatabaseSettings();
+            options.UseMySql(dbSettings.ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
         });
 
         // Register the JWT Authorization
