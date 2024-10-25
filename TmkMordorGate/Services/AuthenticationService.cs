@@ -1,6 +1,8 @@
 ﻿using System.Net;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using TmkMordorGate.Helpers;
+using TmkMordorGate.Models;
 using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services.Interfaces;
 
@@ -37,7 +39,8 @@ public class AuthenticationService(
         if (!isPasswordValid)
             return new StatusCodeResult((int)HttpStatusCode.Unauthorized);
 
-        //var token = new JwtHelper(configurationService).GenerateJwtToken(auth);
-        return new OkObjectResult("VALID");
+        var token = new JwtHelper(configurationService).GenerateJwtToken(auth);
+        var authenticatedResponse = new AuthenticadedResponse(token, email);
+        return new OkObjectResult(authenticatedResponse);
     }
 }

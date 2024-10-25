@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http.HttpResults;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using TmkMordorGate.Models;
 using TmkMordorGate.Services.Interfaces;
@@ -19,7 +21,14 @@ public class LoginController
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        return await _authenticationService.Authenticate(request.Email, request.Password);
+        try
+        {
+            return await _authenticationService.Authenticate(request.Email, request.Password);
+        }
+        catch
+        {
+            return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
+        }
     }
     
     

@@ -20,7 +20,7 @@ public static class InitialServicesConfig
         builder.Services.AddHealthChecks()
             .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddHttpClient();
-        
+
         // Configure services based on the environment
         // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable
 
@@ -113,17 +113,16 @@ public static class InitialServicesConfig
             schema.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         }).AddJwtBearer(options =>
         {
+            var jwtKey = builder.Configuration.GetValue<string>("JwtKey");
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = "https://localhost:4430",
-                ValidAudience = "https://localhost:4430/api/v1",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Services
-                    .BuildServiceProvider().GetRequiredService<IMordorConfigurationService>()
-                    .GetConfigurationValue("JwtKey")))
+                ValidIssuer = builder.Configuration.GetValue<string>("JwtIssuer"), // Use IConfiguration directly
+                ValidAudience = builder.Configuration.GetValue<string>("JwtAudience"),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
             };
         });
 
