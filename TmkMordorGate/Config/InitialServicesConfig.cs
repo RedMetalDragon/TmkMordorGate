@@ -20,6 +20,7 @@ public static class InitialServicesConfig
         builder.Services.AddHealthChecks()
             .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddHttpClient();
+        
         // Configure services based on the environment
         // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable
 
@@ -42,6 +43,24 @@ public static class InitialServicesConfig
             builder.Configuration.AddJsonFile("appsettings.Staging.json", true, true);
             ConfigureProductionServices(builder);
         }
+    }
+
+
+    public static void TmkConfigureMiddleWares(this IApplicationBuilder app)
+    {
+        app.UseRouting();
+        app.UseHttpsRedirection();
+        app.UseMiddleware<CustomAuthenticationMiddleware>();
+        app.UseSetHeaderInGandalfMiddleware();
+    }
+
+    #region Private
+
+    // This method is used to determine if the application is running in a local development environment
+    private static bool IsLocalDevelopmentRun(this WebApplicationBuilder app)
+    {
+        var env = app.Environment;
+        return env.EnvironmentName == "Local";
     }
 
     private static void ConfigureDevelopmentServices(this WebApplicationBuilder builder)
@@ -113,7 +132,9 @@ public static class InitialServicesConfig
         {
             var mordorConfigurationService = serviceProvider.GetRequiredService<IMordorConfigurationService>();
             var dbSettings = mordorConfigurationService.GetDatabaseSettings();
-            options.UseMySql(dbSettings.ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
+            options.UseMySql(
+                DatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
+                    .ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
         });
 
         // Register the JWT Authorization
@@ -136,23 +157,6 @@ public static class InitialServicesConfig
             });
         });
         builder.Services.AddEndpointsApiExplorer();
-    }
-
-    public static void TmkConfigureMiddleWares(this IApplicationBuilder app)
-    {
-        app.UseRouting();
-        app.UseHttpsRedirection();
-        app.UseMiddleware<CustomAuthenticationMiddleware>();
-        app.UseSetHeaderInGandalfMiddleware();
-    }
-
-    #region Private
-
-    // This method is used to determine if the application is running in a local development environment
-    private static bool IsLocalDevelopmentRun(this WebApplicationBuilder app)
-    {
-        var env = app.Environment;
-        return env.EnvironmentName == "Local";
     }
 
     #endregion

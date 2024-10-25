@@ -1,24 +1,43 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using TmkMordorGate.Models;
+﻿using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using TmkMordorGate.Helpers;
 using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services.Interfaces;
 
 namespace TmkMordorGate.Services;
 
-public class AuthenticationService : IAuthenticationService
+public class AuthenticationService(
+    IAuthenticationRepository authenticationRepository,
+    IMordorConfigurationService configurationService) : IAuthenticationService
 {
-    private readonly IAuthenticationRepository _authenticationRepository;
-
-    public AuthenticationService(IAuthenticationRepository authenticationRepository)
-    {
-        _authenticationRepository = authenticationRepository;
-    }
-
     /// <summary>
     /// Authenticates a user.
     /// </summary>
-    public Task<IActionResult> Authenticate(AuthenticatedRequest model)
+    public async Task<IActionResult> Authenticate(string email, string password)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            return new StatusCodeResult((int)HttpStatusCode.BadRequest);
+        }
+
+        if (!email.Contains('@'))
+        {
+            return new StatusCodeResult((int)HttpStatusCode.BadRequest);
+        }
+
+        var auth = await authenticationRepository.GetUser(email)!;
+
+        if (auth == null)
+        {
+            return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
+        }
+
+        var isPasswordValid = BCryptHelper.VerifyPassword(password, auth.PasswordHash);
+
+        if (!isPasswordValid)
+            return new StatusCodeResult((int)HttpStatusCode.Unauthorized);
+
+        //var token = new JwtHelper(configurationService).GenerateJwtToken(auth);
+        return new OkObjectResult("VALID");
     }
 }

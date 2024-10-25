@@ -5,5 +5,5 @@ namespace TmkMordorGate.Services.Interfaces;
 
 public interface IAuthenticationService
 {
-    Task<IActionResult> Authenticate(AuthenticatedRequest model);
+    Task<IActionResult> Authenticate(string email, string password);
 }

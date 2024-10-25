@@ -14,7 +14,7 @@ public class TimeKeeperDbContext : Microsoft.EntityFrameworkCore.DbContext
         _settings = settings;
     }
 
-    public DbSet<Auth> Auths { get; set; }
+    public DbSet<Auth?> Auths { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

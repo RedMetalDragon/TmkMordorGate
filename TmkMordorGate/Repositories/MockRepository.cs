@@ -10,7 +10,7 @@ public class MockRepository : IAuthenticationRepository
     /// </summary>
     /// <param name="emailAddress"> Email address </param>
     /// <returns></returns>
-    public Task<Auth> GetUser(string emailAddress)
+    public Task<Auth?>? GetUser(string emailAddress)
     {
         var user = new Auth
         {
