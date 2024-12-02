@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,11 @@ public static class InitialServicesConfig
         builder.Services.AddHealthChecks()
             .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddHttpClient();
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddJsonOptions(jsonOptions =>
+            {
+                jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            });
 
         // Configure services based on the environment
         // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable

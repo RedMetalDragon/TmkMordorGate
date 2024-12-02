@@ -1,8 +1,16 @@
 ﻿namespace TmkMordorGate.Models;
 
-public class AuthenticadedResponse(string accessToken, string emailAddress, int employeeID)
+public class AuthenticadedResponse
 {
-    public readonly string AccessToken = accessToken;
-    public readonly string EmailAddress = emailAddress;
-    public readonly int EmployeeId = employeeID;
+    public  string AccessToken { get; set; }
+    public  string EmailAddress { get; set;}
+    public  int EmployeeId { get; set; }
+
+    public AuthenticadedResponse(string accessToken, string emailAddress, int employeeId)
+    {
+        AccessToken = accessToken;
+        EmailAddress = emailAddress;
+        EmployeeId = employeeId;
+            
+    }
 }
