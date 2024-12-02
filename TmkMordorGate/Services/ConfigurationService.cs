@@ -14,7 +14,7 @@ public interface IMordorConfigurationService
 
     IEnumerable<string> GetAllKeys();
 
-    DatabaseSettings GetDatabaseSettings();
+    IDatabaseSettings GetDatabaseSettings();
 }
 
 public interface IMordorPickerDestinationsService
@@ -157,9 +157,9 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
     {
         return _configuration.AsEnumerable().Select(x => x.Key);
     }
-    public DatabaseSettings GetDatabaseSettings()
+    public IDatabaseSettings GetDatabaseSettings()
     {
-        return new DatabaseSettings
+        return new TmkMySqlDatabaseSettings
         {
             DatabaseName = GetConfigurationValue("_database_DatabaseName"),
             Host = GetConfigurationValue("_database_Host"),

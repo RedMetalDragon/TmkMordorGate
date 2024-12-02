@@ -5,11 +5,11 @@ using TmkMordorGate.Repositories.Interfaces;
 
 namespace TmkMordorGate.Repositories;
 
-public class AuthRepository : IAuthenticationRepository
+public class TmkAuthenticationRepository : IAuthenticationRepository
 {
     private readonly TimeKeeperDbContext _dbContext;
 
-    public AuthRepository(TimeKeeperDbContext dbContext)
+    public TmkAuthenticationRepository(TimeKeeperDbContext dbContext)
     {
         _dbContext = dbContext;
     }

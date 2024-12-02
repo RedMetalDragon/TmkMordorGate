@@ -1,3 +1,4 @@
+using System.Globalization;
 using TmkMordorGate.Models;
 using TmkMordorGate.Services;
 
@@ -21,27 +22,34 @@ public class JwtHelper(IMordorConfigurationService mordorConfigurationService)
                 "Authenticated user's email cannot be null.");
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(mordorConfigurationService.GetConfigurationValue("JwtKey"));
-        var issuer = mordorConfigurationService.GetConfigurationValue("JwtIssuer");
-        var audience = mordorConfigurationService.GetConfigurationValue("JwtAudience");
-        //var tokenExpiryInHours = int.Parse(mordorConfigurationService.GetConfigurationValue("JwtExpiryInHours"));
-
-        var tokenDescriptor = new SecurityTokenDescriptor
+        try
         {
-            Subject = new ClaimsIdentity(new[]
+            var key = Encoding.ASCII.GetBytes(mordorConfigurationService.GetConfigurationValue("JwtKey"));
+            var issuer = mordorConfigurationService.GetConfigurationValue("JwtIssuer");
+            var audience = mordorConfigurationService.GetConfigurationValue("JwtAudience");
+            //var tokenExpiryInHours = int.Parse(mordorConfigurationService.GetConfigurationValue("JwtExpiryInHours"),
+            //    NumberStyles.Integer, CultureInfo.InvariantCulture);
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                new Claim(JwtRegisteredClaimNames.Email, authenticatedUser.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            }),
-            //Expires = DateTime.UtcNow.AddHours(tokenExpiryInHours),
-            Expires = DateTime.Now.AddHours(1),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials =
-                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Email, authenticatedUser.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, authenticatedUser.EmployeeID.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                NotBefore = DateTime.UtcNow,
+                Issuer = issuer,
+                Audience = audience,
+                SigningCredentials =
+                    new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 }

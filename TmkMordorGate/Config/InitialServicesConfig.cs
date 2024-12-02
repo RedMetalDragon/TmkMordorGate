@@ -7,7 +7,10 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using TmkMordorGate.DbContext;
 using TmkMordorGate.Middlewares;
+using TmkMordorGate.Repositories;
+using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
+using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
 using Yarp.ReverseProxy.Transforms;
 
@@ -20,6 +23,7 @@ public static class InitialServicesConfig
         builder.Services.AddHealthChecks()
             .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddHttpClient();
+        builder.Services.AddControllers();
 
         // Configure services based on the environment
         // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable
@@ -48,6 +52,7 @@ public static class InitialServicesConfig
 
     public static void TmkConfigureMiddleWares(this IApplicationBuilder app)
     {
+        app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseRouting();
         app.UseHttpsRedirection();
         app.UseMiddleware<CustomAuthenticationMiddleware>();
@@ -85,7 +90,7 @@ public static class InitialServicesConfig
         // and add the path prefix and request transform for the Gandalf service
         builder.Services.AddReverseProxy()
             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-
+        
         // Register the Mordor configuration service
         builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
 
@@ -120,19 +125,23 @@ public static class InitialServicesConfig
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = builder.Configuration.GetValue<string>("JwtIssuer"), // Use IConfiguration directly
-                ValidAudience = builder.Configuration.GetValue<string>("JwtAudience"),
+                //ValidIssuer = builder.Configuration.GetValue<string>("JwtIssuer"), // Use IConfiguration directly
+                //ValidAudience = builder.Configuration.GetValue<string>("JwtAudience"),
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
             };
         });
 
 
+        // Register the Database settings
+        builder.Services.AddScoped<IDatabaseSettings, TmkMySqlDatabaseSettings>();
+
+        // Register the Database context
         builder.Services.AddDbContext<TimeKeeperDbContext>((serviceProvider, options) =>
         {
             var mordorConfigurationService = serviceProvider.GetRequiredService<IMordorConfigurationService>();
             var dbSettings = mordorConfigurationService.GetDatabaseSettings();
             options.UseMySql(
-                DatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
+                TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
                     .ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
         });
 
@@ -141,6 +150,12 @@ public static class InitialServicesConfig
         {
             policy.RequireAuthenticatedUser(); // Requires valid JWT
         });
+        
+        // Register the Authentication repository
+        builder.Services.AddScoped<IAuthenticationRepository, TmkAuthenticationRepository>();
+        
+        // Register the Authentication service
+        builder.Services.AddScoped<IAuthenticationService, TmkAuthenticationService>();
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)

@@ -7,8 +7,8 @@ using TmkMordorGate.Services.Interfaces;
 namespace TmkMordorGate.Controllers;
 
 [ApiController]
-[Route("api/v1/mordor/[controller]")]
-public class LoginController
+[Route("api/v1/mordor")]
+public class LoginController: ControllerBase
 {
     private readonly IAuthenticationService _authenticationService;
 

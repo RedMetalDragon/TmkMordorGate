@@ -1,16 +1,19 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using TmkMordorGate.Services;
 
 namespace TmkMordorGate.Helpers;
 
 public class JwtMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly IMordorConfigurationService _configurationService;
 
-    public JwtMiddleware(RequestDelegate next)
+    public JwtMiddleware(RequestDelegate next, IMordorConfigurationService configurationService)
     {
         _next = next;
+        _configurationService = configurationService;
     }
 
     public async Task Invoke(HttpContext context)
@@ -28,11 +31,12 @@ public class JwtMiddleware
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes("your_secret_key_here");
+            var key = Encoding.ASCII.GetBytes(_configurationService.GetConfigurationValue("JwtKey"));
             tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateLifetime = true,
                 ValidateIssuer = false,
                 ValidateAudience = false,
                 ClockSkew = TimeSpan.Zero

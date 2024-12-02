@@ -7,9 +7,9 @@ namespace TmkMordorGate.DbContext;
 
 public class TimeKeeperDbContext : Microsoft.EntityFrameworkCore.DbContext
 {
-    private readonly DatabaseSettings _settings;
+    private readonly IDatabaseSettings _settings;
 
-    public TimeKeeperDbContext(DbContextOptions options, DatabaseSettings settings) : base(options)
+    public TimeKeeperDbContext(DbContextOptions options, IDatabaseSettings settings) : base(options)
     {
         _settings = settings;
     }
