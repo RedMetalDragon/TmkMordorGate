@@ -1,6 +1,7 @@
 using Yarp.ReverseProxy.Configuration;
 using System.Net;
 using TmkMordorGate.Config;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Models.Enums;
 using DestinationConfig = Yarp.ReverseProxy.Configuration.DestinationConfig;
 

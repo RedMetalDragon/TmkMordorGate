@@ -1,11 +1,8 @@
-﻿using System.Text;
-using System.Text.Json;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.Text.Json;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.DbContext;
 using TmkMordorGate.Middlewares;
 using TmkMordorGate.Repositories;
@@ -13,7 +10,6 @@ using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
 using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
-using Yarp.ReverseProxy.Transforms;
 
 namespace TmkMordorGate.Config;
 
@@ -62,6 +58,7 @@ public static class InitialServicesConfig
         app.UseHttpsRedirection();
         app.UseMiddleware<CustomAuthenticationMiddleware>();
         app.UseSetHeaderInGandalfMiddleware();
+        app.UseAuthorization();
     }
 
     #region Private
@@ -95,14 +92,11 @@ public static class InitialServicesConfig
         // and add the path prefix and request transform for the Gandalf service
         builder.Services.AddReverseProxy()
             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-        
+
         // Register the Mordor configuration service
-        builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
-
+        builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
         builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
-
         builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
-
         // Rate limiting configuration
         builder.Services.AddRateLimiter(rateLimiterOptions =>
         {
@@ -112,34 +106,15 @@ public static class InitialServicesConfig
                 options.PermitLimit = 10;
             });
         });
-
         builder.Services.AddEndpointsApiExplorer();
-
-        // Register the JWT Authentication
-        builder.Services.AddAuthentication(schema =>
-        {
-            schema.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            schema.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            schema.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer(options =>
-        {
-            var jwtKey = builder.Configuration.GetValue<string>("JwtKey");
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                //ValidIssuer = builder.Configuration.GetValue<string>("JwtIssuer"), // Use IConfiguration directly
-                //ValidAudience = builder.Configuration.GetValue<string>("JwtAudience"),
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
-            };
-        });
-
+        // Register the Authentication configuration
+        builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
+        var serviceProvider = builder.Services.BuildServiceProvider();
+        var authConfig = serviceProvider.GetRequiredService<IAuthenticationConfiguration>();
+        authConfig.ConfigureAuthentication(builder.Services, builder.Configuration);
 
         // Register the Database settings
-        builder.Services.AddScoped<IDatabaseSettings, TmkMySqlDatabaseSettings>();
-
+        builder.Services.AddSingleton<IDatabaseSettings, TmkMySqlDatabaseSettings>();
         // Register the Database context
         builder.Services.AddDbContext<TimeKeeperDbContext>((serviceProvider, options) =>
         {
@@ -149,18 +124,15 @@ public static class InitialServicesConfig
                 TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
                     .ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
         });
-
         // Register the JWT Authorization
-        builder.Services.AddAuthorizationBuilder().AddPolicy("JwtBearer", policy =>
+        builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
         {
             policy.RequireAuthenticatedUser(); // Requires valid JWT
         });
-        
         // Register the Authentication repository
-        builder.Services.AddScoped<IAuthenticationRepository, TmkAuthenticationRepository>();
-        
+        builder.Services.AddSingleton<IAuthenticationRepository, TmkAuthenticationRepository>();
         // Register the Authentication service
-        builder.Services.AddScoped<IAuthenticationService, TmkAuthenticationService>();
+        builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)

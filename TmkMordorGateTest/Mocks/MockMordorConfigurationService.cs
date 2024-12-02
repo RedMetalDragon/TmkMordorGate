@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using TmkMordorGate.Config;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Services;
 
 namespace TmkMordorGateTest.Mocks;

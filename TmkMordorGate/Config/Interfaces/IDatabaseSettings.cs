@@ -1,4 +1,4 @@
-namespace TmkMordorGate.Config;
+namespace TmkMordorGate.Config.Interfaces;
 
 public interface IDatabaseSettings
 {

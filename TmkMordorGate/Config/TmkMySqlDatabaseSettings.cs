@@ -1,3 +1,5 @@
+using TmkMordorGate.Config.Interfaces;
+
 namespace TmkMordorGate.Config;
 
 public class TmkMySqlDatabaseSettings : IDatabaseSettings

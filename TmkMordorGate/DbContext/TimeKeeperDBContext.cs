@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Pomelo.EntityFrameworkCore.MySql;
 using TmkMordorGate.Config;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Models;
 
 namespace TmkMordorGate.DbContext;

@@ -37,8 +37,10 @@ public class JwtMiddleware
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateLifetime = true,
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidIssuer = _configurationService.GetConfigurationValue("JwtIssuer"),
+                ValidateAudience = true,
+                ValidAudience = _configurationService.GetConfigurationValue("JwtAudience"),
                 ClockSkew = TimeSpan.Zero
             }, out var validatedToken);
 
