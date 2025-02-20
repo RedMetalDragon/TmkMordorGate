@@ -25,7 +25,7 @@ public class DbTestExecutor
     [Fact]
     public async Task TestGetNullForNotFoundUserById()
     {
-        var repository = _integrationTestSetup.AuthenticationRepository;
+        var repository = _integrationTestSetup.AccessControlRepository;
         var invalidEmail = _integrationTestSetup._configuration.GetSection("TestData:InvalidUserEmail").Value;
         if (invalidEmail != null)
         {
@@ -43,7 +43,7 @@ public class DbTestExecutor
     [Fact]
     public async Task TestGetUserByEmail()
     {
-        var repository = _integrationTestSetup.AuthenticationRepository;
+        var repository = _integrationTestSetup.AccessControlRepository;
         var validEmail = _integrationTestSetup._configuration.GetSection("TestData:ValidUserEmail").Value;
         if (validEmail != null)
         {

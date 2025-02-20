@@ -15,12 +15,24 @@ public class TimeKeeperDbContext : Microsoft.EntityFrameworkCore.DbContext
         _settings = settings;
     }
 
-    public DbSet<Auth?> Auths { get; set; }
+    public DbSet<Auth> Auths { get; set; }
+    
+    public DbSet<Permission> Permissions { get; set; }
+    
+    public DbSet<Role> Roles { get; set; }
+    
+    public DbSet<Feature> Features { get; set; }
+    
+    public DbSet<Plan> Plans { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfiguration(new AuthTableConfiguration());
+        modelBuilder.ApplyConfiguration(new PermissionTableConfiguration());
+        modelBuilder.ApplyConfiguration(new RoleTableConfiguration());
+        modelBuilder.ApplyConfiguration(new FeatureTableConfiguration());
+        modelBuilder.ApplyConfiguration(new PlanTableConfiguration());
     }
 
     public override int SaveChanges()

@@ -4,13 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.DbContext;
+using TmkMordorGate.Helpers;
 using TmkMordorGate.Middlewares;
 using TmkMordorGate.Repositories;
 using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
 using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
-
+using TmkMordorGate.Services.Authorization;
 namespace TmkMordorGate.Config;
 
 public static class InitialServicesConfig
@@ -130,9 +131,37 @@ public static class InitialServicesConfig
             policy.RequireAuthenticatedUser(); // Requires valid JWT
         });
         // Register the Authentication repository
-        builder.Services.AddSingleton<IAuthenticationRepository, TmkAuthenticationRepository>();
+        builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
         // Register the Authentication service
         builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
+        
+        // Register the Authorization services
+        var authorizationFactory = new AuthorizationFactory();
+        var authorizationInstancesFromJson = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
+        foreach (var instance in authorizationInstancesFromJson)
+        {
+            var className = instance.GetValue<string>("Name");
+            // Check if the class name is valid
+            if (string.IsNullOrEmpty(className))
+            {
+                throw new ArgumentException("Class name cannot be null or empty", nameof(className));
+            }
+            if (!authorizationFactory.IsValidServiceType(className))
+            {
+                Console.WriteLine($"Invalid class name {className} cannot be used");
+                continue;
+            }
+            var authService = authorizationFactory.CreateAuthorizationService(className);
+            try
+            {
+                builder.Services.AddSingleton<IAuthorizationService>(authService);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error creating instance of {className}: {e.Message}");
+                throw;
+            }
+        }
     }
 
     private static void ConfigureProductionServices(this WebApplicationBuilder builder)
@@ -149,6 +178,6 @@ public static class InitialServicesConfig
         });
         builder.Services.AddEndpointsApiExplorer();
     }
-
+    
     #endregion
 }

@@ -14,7 +14,7 @@ public class TmkIntegrationTestSetup
     
     public TimeKeeperDbContext DbContext { get; private set; }
     public TmkAuthenticationService AuthenticationService { get; private set; }
-    public TmkAuthenticationRepository AuthenticationRepository { get; private set; }
+    public TmkAccessControlRepository AccessControlRepository { get; private set; }
     
     public TmkIntegrationTestSetup()
     {
@@ -24,7 +24,7 @@ public class TmkIntegrationTestSetup
             .AddEnvironmentVariables() // Override with environment variables if set
             .Build();
         DbContext = GetTimeKeeperDbContext();
-        AuthenticationRepository = GetAuthenticationRepository();
+        AccessControlRepository = GetAuthenticationRepository();
         AuthenticationService = GetAuthenticationService();
     }
 
@@ -45,10 +45,10 @@ public class TmkIntegrationTestSetup
         return new TimeKeeperDbContext(options, dbSettings);
     }
 
-    private TmkAuthenticationRepository GetAuthenticationRepository()
+    private TmkAccessControlRepository GetAuthenticationRepository()
     {
         var context = GetTimeKeeperDbContext();
-        return new TmkAuthenticationRepository(context);
+        return new TmkAccessControlRepository(context);
     }
 
     private TmkAuthenticationService GetAuthenticationService()

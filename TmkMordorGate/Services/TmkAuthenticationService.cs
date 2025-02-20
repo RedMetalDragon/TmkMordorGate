@@ -9,7 +9,7 @@ using TmkMordorGate.Services.Interfaces;
 namespace TmkMordorGate.Services;
 
 public class TmkAuthenticationService(
-    IAuthenticationRepository authenticationRepository,
+    IAuthenticationAuthorizationRepository authenticationAuthorizationRepository,
     IMordorConfigurationService configurationService) : IAuthenticationService
 {
     /// <summary>
@@ -36,11 +36,11 @@ public class TmkAuthenticationService(
             return new StatusCodeResult((int)HttpStatusCode.BadRequest);
         }
 
-        var auth = await authenticationRepository.GetUser(email)!;
+        var auth = await authenticationAuthorizationRepository.GetUser(email)!;
 
         if (auth == null)
         {
-            return new StatusCodeResult((int)HttpStatusCode.InternalServerError);
+            return new StatusCodeResult((int)HttpStatusCode.NotAcceptable);
         }
 
         var employeeId = auth.EmployeeID;
