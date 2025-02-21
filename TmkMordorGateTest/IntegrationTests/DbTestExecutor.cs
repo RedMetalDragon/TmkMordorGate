@@ -56,4 +56,24 @@ public class DbTestExecutor
             Assert.Fail("Valid user email not found in test settings (JSON file)");
         }
     }
+    
+    // [Fact]
+    // public async Task TestGetPermissions()
+    // {
+    //     var repository = _integrationTestSetup.AccessControlRepository;
+    //     var roleId = int.Parse(_integrationTestSetup._configuration.GetSection("TestData:RoleId").Value);
+    //     if (roleId != 0)
+    //     {
+    //         var result = await repository.GetPermissions(roleId);
+    //         // Assert
+    //         Assert.NotEmpty(result);
+    //     }
+    //     else
+    //     {
+    //         Assert.Fail("Role ID not found in test settings (JSON file)");
+    //     }
+    // }
+    
+    
+    
 }

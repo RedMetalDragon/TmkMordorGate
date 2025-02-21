@@ -24,7 +24,7 @@ public class TmkIntegrationTestSetup
             .AddEnvironmentVariables() // Override with environment variables if set
             .Build();
         DbContext = GetTimeKeeperDbContext();
-        AccessControlRepository = GetAuthenticationRepository();
+        AccessControlRepository = GetAuthorizationAuthenticationRepository();
         AuthenticationService = GetAuthenticationService();
     }
 
@@ -45,7 +45,7 @@ public class TmkIntegrationTestSetup
         return new TimeKeeperDbContext(options, dbSettings);
     }
 
-    private TmkAccessControlRepository GetAuthenticationRepository()
+    private TmkAccessControlRepository GetAuthorizationAuthenticationRepository()
     {
         var context = GetTimeKeeperDbContext();
         return new TmkAccessControlRepository(context);
@@ -53,7 +53,7 @@ public class TmkIntegrationTestSetup
 
     private TmkAuthenticationService GetAuthenticationService()
     {
-        var repository = GetAuthenticationRepository();
+        var repository = GetAuthorizationAuthenticationRepository();
         return new TmkAuthenticationService(repository, new MockMordorConfigurationService(_configuration));
     }
 }
