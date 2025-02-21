@@ -38,18 +38,18 @@ public class TmkAccessControlRepository :
         return features.SelectMany(x => x).Distinct();
     }
 
-    public Task<Feature?> GetFeature(int featureId)
+    public async Task<Feature?> GetFeature(int featureId)
     {
-        return _dbContext.Features.FirstOrDefaultAsync(f => f.FeatureID == featureId);
+        return await _dbContext.Features.FirstOrDefaultAsync(f => f.FeatureID == featureId);
     }
 
-    public Task<Plan?> GetPlan(int planId)
+    public async Task<Plan?> GetPlan(int planId)
     {
-        return _dbContext.Plans.FirstOrDefaultAsync(p => p.PlanID== planId);
+        return await _dbContext.Plans.FirstOrDefaultAsync(p => p.PlanID == planId);
     }
 
-    public Task<Role?> GetRole(int roleId)
+    public async Task<Role?> GetRole(int roleId)
     {
-        return _dbContext.Roles.FirstOrDefaultAsync(r => r.RoleID == roleId);
+        return await _dbContext.Roles.FirstOrDefaultAsync(r => r.RoleID == roleId);
     }
 }

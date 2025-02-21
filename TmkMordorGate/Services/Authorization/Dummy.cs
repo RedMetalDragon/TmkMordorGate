@@ -7,25 +7,15 @@ namespace TmkMordorGate.Services.Authorization;
 
 public class Dummy : IAuthorizationService
 {
-    public Task<IActionResult> Authorize(Employee? employee)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> IsAuthorized(string email, string password)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> IsAuthorized(string jwtToken)
-    {
-        throw new NotImplementedException();
-    }
-
-
     Task<bool> IAuthorizationService.Authorize(HttpContext context)
     {
         return Task.FromResult(context.Request.Headers.ContainsKey("Authorization"));
+        
+    }
+
+    public string GetServiceTarget()
+    {
+        return "Dummy";
     }
 
     public Task<IActionResult> Authorize(HttpContext context)

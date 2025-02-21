@@ -9,13 +9,22 @@ namespace TmkMordorGate.Helpers;
 public sealed class AuthorizationFactory : IAuthorizationFactory
 {
     private readonly ImmutableDictionary<string, Type> _authTypes;
+    private IServiceProvider? _serviceProvider;
 
     public AuthorizationFactory()
     {
+        _serviceProvider = null;
         _authTypes = FindAuthorizationServiceTypes(CultureInfo.CurrentCulture);
     }
 
-    private static ImmutableDictionary<string, Type> FindAuthorizationServiceTypes(CultureInfo cultureInfo, bool ignoreCase = true) 
+    public AuthorizationFactory(IServiceProvider? serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        _authTypes = FindAuthorizationServiceTypes(CultureInfo.CurrentCulture);
+    }
+
+    private static ImmutableDictionary<string, Type> FindAuthorizationServiceTypes(CultureInfo cultureInfo,
+        bool ignoreCase = true)
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         var authTypes = new Dictionary<string, Type>();
@@ -48,6 +57,7 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
                 continue;
             }
         }
+
         return authTypes.ToImmutableDictionary();
     }
 
@@ -58,9 +68,10 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         {
             Console.WriteLine(type);
         }
+
         Console.WriteLine("-----------------------------------");
     }
-    
+
     public IAuthorizationService? CreateAuthorizationService(string className)
     {
         try
@@ -69,7 +80,10 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
             {
                 return null;
             }
-
+            // Create an instance of the type using the service provider if available
+            if (_serviceProvider != null)
+                return (IAuthorizationService)ActivatorUtilities.CreateInstance(_serviceProvider, type)!;
+            // Otherwise, create an instance of the type using the default constructor
             return (IAuthorizationService)Activator.CreateInstance(type)!;
         }
         catch (Exception ex) when (
@@ -96,7 +110,7 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         return _authTypes.Keys;
     }
 
-    
+
     /// <summary>
     ///  Checks if the provided class name is a valid Authorization service type.
     /// </summary>
@@ -108,7 +122,7 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
     {
         return _authTypes.ContainsKey(className);
     }
-    
+
     /// <summary>
     ///   Checks if the provided type is a valid Authorization service type.
     /// </summary>
@@ -121,8 +135,8 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         if (!type.IsClass || type.IsAbstract)
             return false;
 
-        if (type.GetConstructor(Type.EmptyTypes) == null)
-            return false;
+        //if (type.GetConstructor(Type.EmptyTypes) == null)
+        //    return false;
 
         // Check if the type implements IAuthorizationService
         return typeof(IAuthorizationService).IsAssignableFrom(type);

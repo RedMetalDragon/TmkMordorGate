@@ -11,173 +11,292 @@ using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
 using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
-using TmkMordorGate.Services.Authorization;
-namespace TmkMordorGate.Config;
 
-public static class InitialServicesConfig
+namespace TmkMordorGate.Config
 {
-    public static void ConfigureInitialServices(this WebApplicationBuilder builder)
+    public static class ServiceConfigurationExtensions
     {
-        builder.Services.AddHealthChecks()
-            .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
-        builder.Services.AddHttpClient();
-        builder.Services.AddControllers()
-            .AddJsonOptions(jsonOptions =>
+        public static void ConfigureInitialServices(this WebApplicationBuilder builder)
+        {
+            // Configure base services common to all environments
+            builder.Services.AddBaseServices();
+
+            // Select environment-specific configuration
+            if (builder.Environment.EnvironmentName == "Local")
+            {
+                Console.WriteLine("Local development environment detected");
+                builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+                LocalServicesConfig.Configure(builder);
+            }
+            else if (builder.Environment.IsDevelopment())
+            {
+                Console.WriteLine("Development environment detected");
+                builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+                DevelopmentServicesConfig.Configure(builder);
+            }
+            else
+            {
+                Console.WriteLine("Staging/Production environment detected");
+                builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
+                ProductionServicesConfig.Configure(builder);
+            }
+        }
+
+        public static void ConfigureMiddlewares(this IApplicationBuilder app)
+        {
+            app.UseMiddleware<RequestLoggingMiddleware>();
+            app.UseRouting();
+            app.UseHttpsRedirection();
+            app.UseMiddleware<CustomAuthenticationMiddleware>();
+            app.UseSetHeaderInGandalfMiddleware();
+            app.UseAuthorization();
+        }
+    }
+
+    /// <summary>
+    /// Base services common to all environments.
+    /// </summary>
+    public static class BaseServicesExtensions
+    {
+        public static void AddBaseServices(this IServiceCollection services)
+        {
+            services.AddHealthChecks()
+                .AddCheck("basic", () => HealthCheckResult.Healthy("OK"));
+
+            services.AddHttpClient();
+
+            services.AddControllers().AddJsonOptions(jsonOptions =>
             {
                 jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             });
-
-        // Configure services based on the environment
-        // ask for the value of the ASPNETCORE_ENVIRONMENT environment variable
-
-        if (IsLocalDevelopmentRun(builder))
-        {
-            Console.WriteLine("Local development environment detected");
-            builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-            ConfigureLocalServices(builder);
         }
 
-        else if (builder.Environment.IsDevelopment())
+        public static void AddRateLimiterServices(this IServiceCollection services)
         {
-            builder.Configuration.AddJsonFile("appsettings.Development.json", true, true);
-            Console.WriteLine("Development environment detected");
-            ConfigureDevelopmentServices(builder);
-        }
-
-        else
-        {
-            builder.Configuration.AddJsonFile("appsettings.Staging.json", true, true);
-            ConfigureProductionServices(builder);
-        }
-    }
-
-
-    public static void TmkConfigureMiddleWares(this IApplicationBuilder app)
-    {
-        app.UseMiddleware<RequestLoggingMiddleware>();
-        app.UseRouting();
-        app.UseHttpsRedirection();
-        app.UseMiddleware<CustomAuthenticationMiddleware>();
-        app.UseSetHeaderInGandalfMiddleware();
-        app.UseAuthorization();
-    }
-
-    #region Private
-
-    // This method is used to determine if the application is running in a local development environment
-    private static bool IsLocalDevelopmentRun(this WebApplicationBuilder app)
-    {
-        var env = app.Environment;
-        return env.EnvironmentName == "Local";
-    }
-
-    private static void ConfigureDevelopmentServices(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-        // Rate limiting configuration
-        builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
-        builder.Services.AddRateLimiter(rateLimiterOptions =>
-        {
-            rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
+            services.AddRateLimiter(options =>
             {
-                options.Window = TimeSpan.FromSeconds(10);
-                options.PermitLimit = 10;
+                options.AddFixedWindowLimiter("fixed", limiterOptions =>
+                {
+                    limiterOptions.Window = TimeSpan.FromSeconds(10);
+                    limiterOptions.PermitLimit = 10;
+                });
             });
-        });
-        builder.Services.AddEndpointsApiExplorer();
+        }
+
+        public static void AddReverseProxyServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddReverseProxy().LoadFromConfig(configuration.GetSection("ReverseProxy"));
+        }
     }
 
-    private static void ConfigureLocalServices(this WebApplicationBuilder builder)
+    /// <summary>
+    /// Services configuration for the Local environment.
+    /// </summary>
+    public static class LocalServicesConfig
     {
-        // Load the reverse proxy configuration from the appsettings.Local.json file
-        // and add the path prefix and request transform for the Gandalf service
-        builder.Services.AddReverseProxy()
-            .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-
-        // Register the Mordor configuration service
-        builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
-        builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
-        builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
-        // Rate limiting configuration
-        builder.Services.AddRateLimiter(rateLimiterOptions =>
+        public static void Configure(WebApplicationBuilder builder)
         {
-            rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
+            // Reverse proxy & rate limiter
+            builder.Services.AddReverseProxyServices(builder.Configuration);
+            builder.Services.AddRateLimiterServices();
+            builder.Services.AddEndpointsApiExplorer();
+
+            // Register Mordor configuration service
+            builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
+            builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
+
+            // Configure Authentication
+            builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
+            BuildAndConfigureAuthentication(builder);
+
+            // Database registration
+            builder.Services.AddSingleton<IDatabaseSettings, TmkMySqlDatabaseSettings>();
+            builder.Services.AddDbContext<TimeKeeperDbContext>((sp, options) =>
             {
-                options.Window = TimeSpan.FromSeconds(10);
-                options.PermitLimit = 10;
+                var mordorConfig = sp.GetRequiredService<IMordorConfigurationService>();
+                var dbSettings = mordorConfig.GetDatabaseSettings();
+                options.UseMySql(
+                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password).ConnectionString,
+                    new MySqlServerVersion(new Version(8, 0, 27)));
             });
-        });
-        builder.Services.AddEndpointsApiExplorer();
-        // Register the Authentication configuration
-        builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
-        var serviceProvider = builder.Services.BuildServiceProvider();
-        var authConfig = serviceProvider.GetRequiredService<IAuthenticationConfiguration>();
-        authConfig.ConfigureAuthentication(builder.Services, builder.Configuration);
 
-        // Register the Database settings
-        builder.Services.AddSingleton<IDatabaseSettings, TmkMySqlDatabaseSettings>();
-        // Register the Database context
-        builder.Services.AddDbContext<TimeKeeperDbContext>((serviceProvider, options) =>
+            // JWT Authorization
+            builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+            });
+            builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
+            builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
+            // Register custom authorization services
+            RegisterAuthorizationServices(builder);
+        }
+
+        private static void BuildAndConfigureAuthentication(WebApplicationBuilder builder)
         {
-            var mordorConfigurationService = serviceProvider.GetRequiredService<IMordorConfigurationService>();
-            var dbSettings = mordorConfigurationService.GetDatabaseSettings();
-            options.UseMySql(
-                TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
-                    .ConnectionString, new MySqlServerVersion(new Version(8, 0, 27)));
-        });
-        // Register the JWT Authorization
-        builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
+            using (var sp = builder.Services.BuildServiceProvider())
+            {
+                var authConfig = sp.GetRequiredService<IAuthenticationConfiguration>();
+                authConfig.ConfigureAuthentication(builder.Services, builder.Configuration);
+            }
+        }
+
+        private static void RegisterAuthorizationServices(WebApplicationBuilder builder)
         {
-            policy.RequireAuthenticatedUser(); // Requires valid JWT
-        });
-        // Register the Authentication repository
-        builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
-        // Register the Authentication service
-        builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
-        
-        // Register the Authorization services
-        var authorizationFactory = new AuthorizationFactory();
-        var authorizationInstancesFromJson = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
-        foreach (var instance in authorizationInstancesFromJson)
-        {
-            var className = instance.GetValue<string>("Name");
-            // Check if the class name is valid
-            if (string.IsNullOrEmpty(className))
+            builder.Services.AddSingleton<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
+            var authorizationFactory = new AuthorizationFactory(builder.Services.BuildServiceProvider());
+            var authorizationInstances = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
+
+            foreach (var instance in authorizationInstances)
             {
-                throw new ArgumentException("Class name cannot be null or empty", nameof(className));
-            }
-            if (!authorizationFactory.IsValidServiceType(className))
-            {
-                Console.WriteLine($"Invalid class name {className} cannot be used");
-                continue;
-            }
-            var authService = authorizationFactory.CreateAuthorizationService(className);
-            try
-            {
-                builder.Services.AddSingleton<IAuthorizationService>(authService);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error creating instance of {className}: {e.Message}");
-                throw;
+                var className = instance.GetValue<string>("Name");
+                if (string.IsNullOrEmpty(className))
+                {
+                    throw new ArgumentException("Class name cannot be null or empty", nameof(className));
+                }
+                if (!authorizationFactory.IsValidServiceType(className))
+                {
+                    Console.WriteLine($"Invalid class name {className} cannot be used");
+                    continue;
+                }
+                var authService = authorizationFactory.CreateAuthorizationService(className);
+                try
+                {
+                    builder.Services.AddSingleton<IAuthorizationService>(authService);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error creating instance of {className}: {e.Message}");
+                    throw;
+                }
             }
         }
     }
 
-    private static void ConfigureProductionServices(this WebApplicationBuilder builder)
+    /// <summary>
+    /// Services configuration for the Development environment.
+    /// </summary>
+    public static class DevelopmentServicesConfig
     {
-        builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-        // Rate limiting configuration
-        builder.Services.AddRateLimiter(rateLimiterOptions =>
+        public static void Configure(WebApplicationBuilder builder)
         {
-            rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>
+            builder.Services.AddReverseProxyServices(builder.Configuration);
+            builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddRateLimiterServices();
+            builder.Services.AddEndpointsApiExplorer();
+
+            // Register custom authorization services (if needed)
+            RegisterAuthorizationServices(builder);
+        }
+
+        private static void RegisterAuthorizationServices(WebApplicationBuilder builder)
+        {
+            var authorizationFactory = new AuthorizationFactory();
+            var authorizationInstances = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
+
+            foreach (var instance in authorizationInstances)
             {
-                options.Window = TimeSpan.FromSeconds(10);
-                options.PermitLimit = 10;
-            });
-        });
-        builder.Services.AddEndpointsApiExplorer();
+                var className = instance.GetValue<string>("Name");
+                if (string.IsNullOrEmpty(className))
+                {
+                    throw new ArgumentException("Class name cannot be null or empty", nameof(className));
+                }
+                if (!authorizationFactory.IsValidServiceType(className))
+                {
+                    Console.WriteLine($"Invalid class name {className} cannot be used");
+                    continue;
+                }
+                var authService = authorizationFactory.CreateAuthorizationService(className);
+                try
+                {
+                    builder.Services.AddSingleton<IAuthorizationService>(authService);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error creating instance of {className}: {e.Message}");
+                    throw;
+                }
+            }
+        }
     }
-    
-    #endregion
+
+    /// <summary>
+    /// Services configuration for the Production environment.
+    /// </summary>
+    public static class ProductionServicesConfig
+    {
+        public static void Configure(WebApplicationBuilder builder)
+        {
+            builder.Services.AddReverseProxyServices(builder.Configuration);
+            builder.Services.AddRateLimiterServices();
+            builder.Services.AddEndpointsApiExplorer();
+
+            // Register Mordor configuration & authentication services
+            builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
+            BuildAndConfigureAuthentication(builder);
+
+            // Database registration
+            builder.Services.AddSingleton<IDatabaseSettings, TmkMySqlDatabaseSettings>();
+            builder.Services.AddDbContext<TimeKeeperDbContext>((sp, options) =>
+            {
+                var mordorConfig = sp.GetRequiredService<IMordorConfigurationService>();
+                var dbSettings = mordorConfig.GetDatabaseSettings();
+                options.UseMySql(
+                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password).ConnectionString,
+                    new MySqlServerVersion(new Version(8, 0, 27)));
+            });
+
+            // JWT Authorization
+            builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+            });
+            builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
+            builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
+            builder.Services.AddSingleton<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
+
+            // Register custom authorization services
+            RegisterAuthorizationServices(builder);
+        }
+
+        private static void BuildAndConfigureAuthentication(WebApplicationBuilder builder)
+        {
+            using (var sp = builder.Services.BuildServiceProvider())
+            {
+                var authConfig = sp.GetRequiredService<IAuthenticationConfiguration>();
+                authConfig.ConfigureAuthentication(builder.Services, builder.Configuration);
+            }
+        }
+
+        private static void RegisterAuthorizationServices(WebApplicationBuilder builder)
+        {
+            var authorizationFactory = new AuthorizationFactory();
+            var authorizationInstances = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
+
+            foreach (var instance in authorizationInstances)
+            {
+                var className = instance.GetValue<string>("Name");
+                if (string.IsNullOrEmpty(className))
+                {
+                    throw new ArgumentException("Class name cannot be null or empty", nameof(className));
+                }
+                if (!authorizationFactory.IsValidServiceType(className))
+                {
+                    Console.WriteLine($"Invalid class name {className} cannot be used");
+                    continue;
+                }
+                var authService = authorizationFactory.CreateAuthorizationService(className);
+                try
+                {
+                    builder.Services.AddSingleton<IAuthorizationService>(authService);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error creating instance of {className}: {e.Message}");
+                    throw;
+                }
+            }
+        }
+    }
 }
