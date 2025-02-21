@@ -1,4 +1,4 @@
-namespace TmkMordorGate.Middlewares;
+namespace TmkMordorGate.Middlewares.Interfaces;
 
 public interface IMiddleware
 {

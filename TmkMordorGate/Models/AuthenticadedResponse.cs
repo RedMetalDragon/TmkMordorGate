@@ -1,15 +1,16 @@
 ﻿namespace TmkMordorGate.Models;
 
-public class AuthenticadedResponse(
-    int auth_UserID,
-    string? auth_EmailAddress,
-    int auth_CustomerID,
-    string? auth_Role,
-    string auth_Token)
+public class AuthenticadedResponse
 {
-    public readonly int Auth_CustomerID = auth_CustomerID;
-    public readonly string? Auth_EmailAddress = auth_EmailAddress;
-    public readonly string? Auth_Role = auth_Role;
-    public readonly string Auth_Token = auth_Token;
-    public readonly int Auth_UserID = auth_UserID;
+    public  string AccessToken { get; set; }
+    public  string EmailAddress { get; set;}
+    public  int EmployeeId { get; set; }
+
+    public AuthenticadedResponse(string accessToken, string emailAddress, int employeeId)
+    {
+        AccessToken = accessToken;
+        EmailAddress = emailAddress;
+        EmployeeId = employeeId;
+            
+    }
 }
