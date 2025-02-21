@@ -43,4 +43,14 @@ public class MockMordorConfigurationService : IMordorConfigurationService
     {
         throw new NotImplementedException();
     }
+
+    public IRedisCacheSettings GetRedisCacheSettings()
+    {
+        return new TmkRedisCacheSettings
+        {
+            Port = GetConfigurationValue("RedisCacheSettings:Port"),
+            Host = GetConfigurationValue("RedisCacheSettings:Host"),
+            Password = GetConfigurationValue("RedisCacheSettings:Password")
+        };
+    }
 }

@@ -11,6 +11,8 @@ using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
 using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using StackExchange.Redis;
 
 namespace TmkMordorGate.Config
 {
@@ -87,6 +89,21 @@ namespace TmkMordorGate.Config
         {
             services.AddReverseProxy().LoadFromConfig(configuration.GetSection("ReverseProxy"));
         }
+        
+        public static void AddRedisCache(this IServiceCollection services, IMordorConfigurationService configuration)
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                var redisSettings = configuration.GetRedisCacheSettings();
+                options.Configuration = $"{redisSettings.Host}:{redisSettings.Port},password={redisSettings.Password}";
+                options.ConfigurationOptions = new ConfigurationOptions()
+                {
+                    Password = redisSettings.Password,
+                    AbortOnConnectFail = true,
+                    EndPoints = { options.Configuration }
+                };
+            });
+        }
     }
 
     /// <summary>
@@ -103,6 +120,7 @@ namespace TmkMordorGate.Config
 
             // Register Mordor configuration service
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>());
             builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
             builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
 
@@ -184,6 +202,8 @@ namespace TmkMordorGate.Config
             builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
             builder.Services.AddRateLimiterServices();
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>());
 
             // Register custom authorization services (if needed)
             RegisterAuthorizationServices(builder);
@@ -234,6 +254,7 @@ namespace TmkMordorGate.Config
             // Register Mordor configuration & authentication services
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
             builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider().GetRequiredService<IMordorConfigurationService>());
             BuildAndConfigureAuthentication(builder);
 
             // Database registration

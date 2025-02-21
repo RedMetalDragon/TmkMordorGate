@@ -16,6 +16,8 @@ public interface IMordorConfigurationService
     IEnumerable<string> GetAllKeys();
 
     IDatabaseSettings GetDatabaseSettings();
+    
+    IRedisCacheSettings GetRedisCacheSettings();
 }
 
 public interface IMordorPickerDestinationsService
@@ -169,4 +171,15 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
             Password = GetConfigurationValue("_database_Password")
         };
     }
+
+    public IRedisCacheSettings GetRedisCacheSettings()
+    {
+        return new TmkRedisCacheSettings
+        {
+            Host = GetConfigurationValue("_redis_Host"),
+            Port = GetConfigurationValue("_redis_Port"),
+            Password = GetConfigurationValue("_redis_Password")
+        };
+    }
 }
+
