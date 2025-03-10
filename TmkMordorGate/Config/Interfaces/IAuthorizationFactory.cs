@@ -11,7 +11,7 @@ public interface IAuthorizationFactory
     ///  The name of the class to be used for authorization.
     /// </param>
     /// <returns></returns>
-    public IAuthorizationService? CreateAuthorizationService(string className);
+    public IAuthorizationService? CreateAuthorizationInstance(string className);
 
     /// <summary>
     /// Creates an authorization service based on the provided predicate and class name.
@@ -23,5 +23,12 @@ public interface IAuthorizationFactory
     ///   The name of the class to be used for authorization.
     /// </param>
     /// <returns></returns>
-    public IAuthorizationService? CreateAuthenticationService(Func<string, bool> predicate, string className);
+    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className);
+
+    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className, string targetRoute);
+    
+    /// <summary>
+    /// Returns a IAhthorizationService based on the provided HttpContext.
+    /// </summary>
+    public IAuthorizationService? GetAuthorizationService(HttpContext context);
 }

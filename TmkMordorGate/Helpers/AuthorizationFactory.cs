@@ -2,14 +2,18 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Globalization;
 using TmkMordorGate.Config.Interfaces;
+using TmkMordorGate.Services.Authorization;
 using TmkMordorGate.Services.Interfaces;
+using Yarp.ReverseProxy.Configuration;
 
 namespace TmkMordorGate.Helpers;
 
 public sealed class AuthorizationFactory : IAuthorizationFactory
 {
     private readonly ImmutableDictionary<string, Type> _authTypes;
+    private readonly IConfiguration _configuration;
     private IServiceProvider? _serviceProvider;
+    private IDictionary<string, IAuthorizationService>? _authorizationServices;
 
     public AuthorizationFactory()
     {
@@ -21,6 +25,8 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
     {
         _serviceProvider = serviceProvider;
         _authTypes = FindAuthorizationServiceTypes(CultureInfo.CurrentCulture);
+        _configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        _authorizationServices = new Dictionary<string, IAuthorizationService>();
     }
 
     private static ImmutableDictionary<string, Type> FindAuthorizationServiceTypes(CultureInfo cultureInfo,
@@ -72,7 +78,7 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         Console.WriteLine("-----------------------------------");
     }
 
-    public IAuthorizationService? CreateAuthorizationService(string className)
+    public IAuthorizationService? CreateAuthorizationInstance(string className)
     {
         try
         {
@@ -80,11 +86,24 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
             {
                 return null;
             }
+
             // Create an instance of the type using the service provider if available
             if (_serviceProvider != null)
                 return (IAuthorizationService)ActivatorUtilities.CreateInstance(_serviceProvider, type)!;
             // Otherwise, create an instance of the type using the default constructor
-            return (IAuthorizationService)Activator.CreateInstance(type)!;
+            var instance = (IAuthorizationService)Activator.CreateInstance(type)!;
+            // add try cath for already existing key
+            try
+            {
+                _authorizationServices?.Add(className, instance);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            return instance;
         }
         catch (Exception ex) when (
             ex is MissingMethodException or MethodAccessException ||
@@ -96,9 +115,47 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         }
     }
 
-    public IAuthorizationService? CreateAuthenticationService(Func<string, bool> predicate, string className)
+    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className)
     {
-        return CreateAuthorizationService(className);
+        return CreateAuthorizationInstance(className);
+    }
+
+    /// <summary>
+    /// Returns a new instance of an IAuthorizationService based on the provided class name, predicate, and target route.
+    /// </summary>
+    /// <param name="predicate">
+    ///   The predicate function to determine if the class name matches the desired criteria.
+    /// </param>
+    /// <param name="className">
+    ///  The name of the class to be used for authorization.
+    /// </param>
+    /// <param name="targetRoute">
+    /// The target route for the authorization service.
+    /// </param>
+    /// <returns>
+    ///  Returns a new instance of an IAuthorizationService based on the provided class name, predicate, and target route.
+    ///  But as side effect the instance is added to the _authorizationServices dictionary.
+    /// </returns>
+    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className,
+        string targetRoute)
+    {
+        if (!predicate(className))
+            throw new ArgumentException("Predicate function not passed", nameof(className));
+        var instance = CreateAuthorizationInstance(className);
+        if (instance != null)
+            _authorizationServices?.Add(targetRoute, instance);
+        return instance;
+    }
+
+    public IAuthorizationService? GetAuthorizationService(HttpContext context)
+    {
+        // Based on the request path, get the IAuthorizationService instance
+        var key = GetKeyByPath(context);
+        if (string.IsNullOrEmpty(key))
+            return new Dummy();
+        if (_authorizationServices?.TryGetValue(key, out var service) ?? false)
+            return service;
+        return new Dummy();
     }
 
     /// <summary>
@@ -109,7 +166,6 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
     {
         return _authTypes.Keys;
     }
-
 
     /// <summary>
     ///  Checks if the provided class name is a valid Authorization service type.
@@ -140,5 +196,40 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
 
         // Check if the type implements IAuthorizationService
         return typeof(IAuthorizationService).IsAssignableFrom(type);
+    }
+
+    /// <summary>
+    ///  Returns the route name based on the provided path.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    private string? GetRouteName(string path)
+    {
+        var yarpRoutes = _configuration.GetSection("ReverseProxy:Routes").Get<Dictionary<string, RouteConfig>>();
+        return yarpRoutes?.FirstOrDefault(route => path.StartsWith(route.Value.Match.Path ?? string.Empty)).Key;
+    }
+
+    /// <summary>
+    ///  Returns the route name based on the provided HttpContext.
+    /// </summary>
+    /// <param name="context">
+    /// The HttpContext object.
+    /// </param>
+    /// <returns></returns>
+    private string? GetKeyByPath(HttpContext context)
+    {
+        if (!context.Request.Path.HasValue)
+            return string.Empty;
+        var path = context.Request.Path.Value;
+        if (!path.Contains("/api/v"))
+            return string.Empty;
+        var routeMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "brain", "routeCore" },
+            //{ "gondor", "routeGondor" }
+            // New routes can be easily added here
+        };
+
+        return routeMappings.FirstOrDefault(mapping => path.Contains(mapping.Key)).Value;
     }
 }

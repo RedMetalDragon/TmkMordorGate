@@ -25,7 +25,7 @@ public class CustomAuthenticationMiddleware : ISkipAuthentication
     {
         await SkipInvoke(context, _pathsToSkip);
     }
-    
+
     /// <summary>
     ///   The SkipInvoke function is used to skip authentication for the paths specified in the
     ///  _jwt_skip_path_ configuration value. If the path is not in the list of paths to skip or the path have the /api/v prefix, the
@@ -40,11 +40,14 @@ public class CustomAuthenticationMiddleware : ISkipAuthentication
         {
             await _next(context);
         }
+        else if (context.Request.Method == "post" && context.Request.Path.ToString().Contains("/brain/users/login"))
+        {
+            await _next(context);
+        }
         else
         {
             await context.ChallengeAsync();
             await _next(context);
-            
         }
     }
 }
