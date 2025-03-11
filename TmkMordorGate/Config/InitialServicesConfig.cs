@@ -105,8 +105,6 @@ namespace TmkMordorGate.Config
         {
             // Reverse proxy & rate limiter
             builder.Services.AddReverseProxyServices(builder.Configuration);
-            builder.Services.AddRateLimiterServices();
-            builder.Services.AddEndpointsApiExplorer();
 
             // Register Mordor configuration service
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
@@ -114,6 +112,9 @@ namespace TmkMordorGate.Config
                 .GetRequiredService<IMordorConfigurationService>());
             builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
             builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
+            
+            builder.Services.AddRateLimiterServices();
+            builder.Services.AddEndpointsApiExplorer();
 
             // Configure Authentication
             builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
@@ -334,19 +335,20 @@ namespace TmkMordorGate.Config
     {
         public static void ConfigureMiddlewares(this WebApplication app)
         {
-            app.MapReverseProxy();
-            app.UseMiddleware<RequestLoggingMiddleware>();
-            app.MapHealthChecks("/health");
-            app.UseHttpsRedirection();
-            app.UseRouting();
-            app.MapControllers();
             app.Use(async (context, next) =>
             {
                 Console.WriteLine($"Request Path: {context.Request.Path}");
                 await next.Invoke();
             });
-            app.UseMiddleware<CustomAuthenticationMiddleware>();
+            app.UseHttpsRedirection();
+            app.UseRouting();
+            app.MapHealthChecks("/health");
+            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseMiddleware<DynamicAuthorizationMiddleware>();
+            app.MapControllers();
+            app.MapReverseProxy();
+            app.UseMiddleware<CustomAuthenticationMiddleware>();
+            
         }
     }
 }

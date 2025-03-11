@@ -25,7 +25,20 @@ public class DynamicAuthorizationMiddleware : IMiddleware
     {
         var authorizationService = _factory.GetAuthorizationService(context);
         if (authorizationService != null)
-            await authorizationService.Authorize(context).ConfigureAwait(false);
+        {
+            var authorized = await authorizationService.Authorize(context);
+            if (authorized && _next != null)
+            {
+                await _next.Invoke(context);
+            }
+            else
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: Request is not authorized")
+                    .ConfigureAwait(false);
+                context.Abort();
+            }
+        }
         else
         {
             // Authorization service not found, so defaulting to not authorize by returning 403 Forbidden.

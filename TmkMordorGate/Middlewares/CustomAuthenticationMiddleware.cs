@@ -40,7 +40,7 @@ public class CustomAuthenticationMiddleware : ISkipAuthentication
         {
             await _next(context);
         }
-        else if (context.Request.Method == "post" && context.Request.Path.ToString().Contains("/brain/users/login"))
+        else if (context.Request.Method == "post" && context.Request.Path.ToString() == "api/v1/mordor/users/login")
         {
             await _next(context);
         }

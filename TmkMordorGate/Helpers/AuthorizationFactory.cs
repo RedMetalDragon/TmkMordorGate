@@ -226,6 +226,8 @@ public sealed class AuthorizationFactory : IAuthorizationFactory
         var routeMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "brain", "routeCore" },
+            { "gondor", "routeGondor" },
+            { "tools", "routeTools" }
             //{ "gondor", "routeGondor" }
             // New routes can be easily added here
         };
