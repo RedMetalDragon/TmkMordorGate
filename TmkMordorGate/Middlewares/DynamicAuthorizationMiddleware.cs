@@ -27,7 +27,7 @@ public class DynamicAuthorizationMiddleware : IMiddleware
         if (authorizationService != null)
         {
             var authorized = await authorizationService.Authorize(context);
-            if (authorized && _next != null)
+            if (authorized)
             {
                 await _next.Invoke(context);
             }
@@ -36,7 +36,6 @@ public class DynamicAuthorizationMiddleware : IMiddleware
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized: Request is not authorized")
                     .ConfigureAwait(false);
-                context.Abort();
             }
         }
         else

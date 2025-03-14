@@ -327,19 +327,19 @@ namespace TmkMordorGate.Config
     {
         public static void ConfigureMiddlewares(this WebApplication app)
         {
+            app.UseHttpsRedirection();
+            app.UseRouting();
+            app.MapHealthChecks("/health");
+            app.UseMiddleware<RequestLoggingMiddleware>();
+            app.UseMiddleware<DynamicAuthenticationMiddleware>();
+            app.UseMiddleware<DynamicAuthorizationMiddleware>();
+            app.MapReverseProxy();
+            app.MapControllers();
             app.Use(async (context, next) =>
             {
                 Console.WriteLine($"Request Path: {context.Request.Path}");
                 await next.Invoke();
             });
-            app.UseHttpsRedirection();
-            app.UseRouting();
-            app.MapHealthChecks("/health");
-            app.UseMiddleware<RequestLoggingMiddleware>();
-            app.UseMiddleware<CustomAuthenticationMiddleware>();
-            app.UseMiddleware<DynamicAuthorizationMiddleware>();
-            app.MapReverseProxy();
-            app.MapControllers();
         }
     }
 }

@@ -4,12 +4,12 @@ using TmkMordorGate.Services;
 
 namespace TmkMordorGate.Middlewares;
 
-public class CustomAuthenticationMiddleware : ISkipAuthentication
+public class DynamicAuthenticationMiddleware : ISkipAuthentication
 {
     private RequestDelegate _next;
     private readonly IEnumerable<string> _pathsToSkip;
 
-    public CustomAuthenticationMiddleware(IMordorConfigurationService mordorConfigurationService, RequestDelegate next)
+    public DynamicAuthenticationMiddleware(IMordorConfigurationService mordorConfigurationService, RequestDelegate next)
     {
         _next = next;
         _pathsToSkip = mordorConfigurationService.GetArrayOfConfigurationValue("_jwt_skip_path_");
@@ -35,19 +35,26 @@ public class CustomAuthenticationMiddleware : ISkipAuthentication
     /// <param name="pathToSkip">IEnumerable of strings containing paths where not authentication is required</param>
     public async Task SkipInvoke(HttpContext context, IEnumerable<string> pathToSkip)
     {
-        if (_pathsToSkip.Any(path => context.Request.Path.ToString().Contains(path)) ||
-            !context.Request.Path.ToString().Contains("/api/v"))
+        // Skip authentication for the login route.
+        if (context.Request.Method == "POST" && context.Request.Path.Value.Contains("/api/v1/mordor/login"))
         {
             await _next(context);
+            return;
         }
-        else if (context.Request.Method == "post" && context.Request.Path.ToString() == "api/v1/mordor/users/login")
+
+        // Authenticate the request (checks the Authorization header token)
+        var authResult = await context.AuthenticateAsync();
+
+        if (authResult is { Succeeded: true, Principal: not null })
         {
+            // User is authenticated; continue processing.
             await _next(context);
         }
         else
         {
+            // User is not authenticated; issue a challenge and do not continue.
             await context.ChallengeAsync();
-            await _next(context);
+            return;
         }
     }
 }
