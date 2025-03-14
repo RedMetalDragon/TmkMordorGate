@@ -20,15 +20,11 @@ namespace TmkMordorGate.Config
     {
         public static void ConfigureInitialServices(this WebApplicationBuilder builder)
         {
-            // Configure base services common to all environments
-            builder.Services.AddBaseServices();
-
             // Select environment-specific configuration
             if (builder.Environment.EnvironmentName == "Local")
             {
                 Console.WriteLine("Local development environment detected");
-                builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-                LocalServicesConfig.Configure(builder);
+                ConfigurationRunner.SetupLocalConfigurationPreBuild(builder);
             }
             else if (builder.Environment.IsDevelopment())
             {
@@ -105,17 +101,13 @@ namespace TmkMordorGate.Config
         {
             // Reverse proxy & rate limiter
             builder.Services.AddReverseProxyServices(builder.Configuration);
-
-            // Register Mordor configuration service
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
-            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider()
-                .GetRequiredService<IMordorConfigurationService>());
             builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
             builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
-            
             builder.Services.AddRateLimiterServices();
             builder.Services.AddEndpointsApiExplorer();
-
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider()
+                .GetRequiredService<IMordorConfigurationService>());
             // Configure Authentication
             builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
             BuildAndConfigureAuthentication(builder);
@@ -344,11 +336,10 @@ namespace TmkMordorGate.Config
             app.UseRouting();
             app.MapHealthChecks("/health");
             app.UseMiddleware<RequestLoggingMiddleware>();
-            app.UseMiddleware<DynamicAuthorizationMiddleware>();
-            app.MapControllers();
-            app.MapReverseProxy();
             app.UseMiddleware<CustomAuthenticationMiddleware>();
-            
+            app.UseMiddleware<DynamicAuthorizationMiddleware>();
+            app.MapReverseProxy();
+            app.MapControllers();
         }
     }
 }

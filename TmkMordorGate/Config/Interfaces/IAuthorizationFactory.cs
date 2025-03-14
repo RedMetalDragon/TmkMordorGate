@@ -25,10 +25,11 @@ public interface IAuthorizationFactory
     /// <returns></returns>
     public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className);
 
-    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className, string targetRoute);
-    
+    public IAuthorizationService? CreateAuthorizationInstance(Func<string, bool> predicate, string className,
+        string targetRoute);
+
     /// <summary>
-    /// Returns a IAhthorizationService based on the provided HttpContext.
+    /// Returns a IAuthorizationService based on the provided HttpContext.
     /// </summary>
     public IAuthorizationService? GetAuthorizationService(HttpContext context);
 }
