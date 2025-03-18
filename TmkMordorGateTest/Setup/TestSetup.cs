@@ -29,7 +29,7 @@ namespace TmkMordorGateTest.Setup
             Configuration = configurationBuilder.Build();
 
             // Build the service collection with required dependencies
-            var services = new ServiceCollection();
+            var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
 
             // Register configuration
             services.AddSingleton<IConfiguration>(Configuration);

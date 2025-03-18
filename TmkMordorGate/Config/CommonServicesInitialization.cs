@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Repositories.Interfaces;
+using TmkMordorGate.Services;
 
 namespace TmkMordorGate.Config;
 
@@ -21,7 +23,8 @@ public class CommonServicesInitialization
             AddHealthCustomized,
             AddControllersCustomized,
             AddHttpClientCustomized,
-            AddRateLimiterServices
+            AddRateLimiterServices,
+            AddMemoryBlackListToken
         ];
     }
 
@@ -55,5 +58,9 @@ public class CommonServicesInitialization
             });
         });
     }
-    
+
+    private static void AddMemoryBlackListToken(IServiceCollection serviceCollection)
+    {
+        serviceCollection.AddSingleton<IBlackListTokenService, MemoryBlackListToken>();
+    }
 }

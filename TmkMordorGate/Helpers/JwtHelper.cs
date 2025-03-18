@@ -20,29 +20,13 @@ public class JwtHelper(IMordorConfigurationService mordorConfigurationService)
         if (string.IsNullOrEmpty(authenticatedUser.Email))
             throw new ArgumentNullException(nameof(authenticatedUser.Email),
                 "Authenticated user's email cannot be null.");
-
         var tokenHandler = new JwtSecurityTokenHandler();
         try
         {
             var key = Encoding.ASCII.GetBytes(mordorConfigurationService.GetConfigurationValue("JwtKey"));
             var issuer = mordorConfigurationService.GetConfigurationValue("JwtIssuer");
             var audience = mordorConfigurationService.GetConfigurationValue("JwtAudience");
-            //var tokenExpiryInHours = int.Parse(mordorConfigurationService.GetConfigurationValue("JwtExpiryInHours"),
-            //    NumberStyles.Integer, CultureInfo.InvariantCulture);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Email, authenticatedUser.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti, authenticatedUser.EmployeeID.ToString())
-                }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                NotBefore = DateTime.UtcNow,
-                Issuer = issuer,
-                Audience = audience,
-                SigningCredentials =
-                    new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
+            var tokenDescriptor = GenerateTokenDescriptor(authenticatedUser, key, issuer, audience);
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
@@ -51,5 +35,25 @@ public class JwtHelper(IMordorConfigurationService mordorConfigurationService)
             Console.WriteLine(e);
             throw;
         }
+    }
+
+    public SecurityTokenDescriptor GenerateTokenDescriptor(Auth authenticatedUser, byte[] key, string issuer,
+        string audience)
+    {
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Email, authenticatedUser.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, authenticatedUser.EmployeeID.ToString())
+            }),
+            Expires = DateTime.UtcNow.AddHours(1),
+            NotBefore = DateTime.UtcNow,
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials =
+                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+        return tokenDescriptor;
     }
 }

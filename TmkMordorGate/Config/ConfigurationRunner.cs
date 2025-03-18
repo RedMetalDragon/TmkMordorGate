@@ -23,13 +23,13 @@ public static class ConfigurationRunner
 
         builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
         builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
-        builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
+        builder.Services.AddSingleton<IMordorPickerDestinationsService, MordorConfigurationService>();
         builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
         builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
         builder.Services.AddSingleton<IDatabaseSettings, TmkMySqlDatabaseSettings>();
-        builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
-        builder.Services.AddSingleton<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
-        builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
+        builder.Services.AddScoped<IAuthenticationRepository, TmkAccessControlRepository>();
+        builder.Services.AddScoped<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
+        builder.Services.AddScoped<IAuthenticationService, TmkAuthenticationService>();
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("Authenticated", policy => { policy.RequireAuthenticatedUser(); });
         builder.Services.AddSingleton<IAuthorizationFactory>(sp => new AuthorizationFactory(sp));
@@ -104,7 +104,7 @@ public static class ConfigurationRunner
         // TODO: Implement
     }
 
-    private static void SetuoDevelopmentConfiguration(IServiceProvider services, WebApplicationBuilder builder)
+    private static void SetupDevelopmentConfiguration(IServiceProvider services, WebApplicationBuilder builder)
     {
         // TODO: Implement
     }

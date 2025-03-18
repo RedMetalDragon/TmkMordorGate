@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,126 +14,73 @@ using Microsoft.IdentityModel.Tokens;
 using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Helpers;
 using TmkMordorGate.Middlewares;
+using TmkMordorGate.Models;
 using TmkMordorGate.Repositories.Interfaces;
+using TmkMordorGate.Services;
 using TmkMordorGateTest.Setup;
 
 namespace TmkMordorGateTest.IntegrationTests;
 
-public class TmkMiddlewaresTests : IAsyncLifetime
+public class DynamicAuthenticationMiddlewareTests : IClassFixture<MiddlewareTestFixture>
+{
+    private MiddlewareTestFixture _fixture;
+
+    public DynamicAuthenticationMiddlewareTests()
     {
-        private readonly TestServer _server;
-        private readonly HttpClient _client;
-        private const string SecretKey = "supersecretkey!123NeedsTo98BeGreater"; // For testing purposes only
-
-        public TmkMiddlewaresTests()
-        {
-            var hostBuilder = new HostBuilder()
-                .ConfigureWebHost(webBuilder =>
-                {
-                    webBuilder.UseTestServer()
-                    .ConfigureServices(services =>
-                    {
-                        // Configure Authentication with JWT Bearer
-                        services.AddAuthentication(options =>
-                        {
-                            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                        })
-                        .AddJwtBearer(options =>
-                        {
-                            options.TokenValidationParameters = new TokenValidationParameters
-                            {
-                                ValidateIssuer = false,
-                                ValidateAudience = false,
-                                ValidateLifetime = false,
-                                ValidateIssuerSigningKey = true,
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey))
-                            };
-
-                            options.Events = new JwtBearerEvents
-                            {
-                                OnTokenValidated = context => Task.CompletedTask
-                            };
-                        });
-
-                        // Register the fake access control repository
-                        services.AddScoped<IAuthenticationAuthorizationRepository, FakeAccessControlRepository>();
-                        services.AddScoped<IAuthorizationFactory, AuthorizationFactory>();
-                    })
-                    .Configure(app =>
-                    {
-                        app.UseAuthentication();
-                        app.UseMiddleware<DynamicAuthenticationMiddleware>();
-                        app.UseMiddleware<DynamicAuthorizationMiddleware>();
-
-                        // Terminal middleware returns OK if reached
-                        app.Run(async context =>
-                        {
-                            await context.Response.WriteAsync("OK");
-                        });
-                    });
-                });
-
-            var host = hostBuilder.Start();
-            _server = host.GetTestServer();
-            _client = _server.CreateClient();
-        }
-
-        // Helper method to create a JWT token with specified claims
-        private string CreateJwtToken(params Claim[] claims)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(5),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey)), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
-        }
-
-        [Fact]
-        public async Task ValidToken_WithBrainAccess_ReturnsOK()
-        {
-            // Arrange: Create a token with BrainAccess claim set to true
-            var token = CreateJwtToken(new Claim("BrainAccess", "true"), new Claim("sub", "123"));
-            _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            // Act: Request a brain-protected endpoint
-            var response = await _client.GetAsync("/api/v1/brain/users/6");
-
-            // Assert: Should pass through the middleware and return OK
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task ValidToken_WithoutBrainAccess_ReturnsUnauthorized()
-        {
-            // Arrange: Create a token with BrainAccess claim set to false
-            var token = CreateJwtToken(new Claim("BrainAccess", "false"), new Claim("sub", "123"));
-            _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            // Act: Request a brain-protected endpoint
-            var response = await _client.GetAsync("/api/v1/brain/users/6");
-
-            // Assert: Should be unauthorized
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task NoToken_ReturnsUnauthorized()
-        {
-            // Arrange: Remove any authorization header
-            _client.DefaultRequestHeaders.Authorization = null;
-
-            // Act: Request a brain-protected endpoint
-            var response = await _client.GetAsync("/api/v1/brain/users/6");
-
-            // Assert: Should be unauthorized
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
-
-        public Task InitializeAsync() => Task.CompletedTask;
-        public Task DisposeAsync() => Task.CompletedTask;
+        _fixture = new MiddlewareTestFixture();
+        _fixture.InitializeAsync().WaitAsync(TimeSpan.FromSeconds(3));
     }
+
+    [Fact]
+    public async Task Authorize_Login_Request_Access()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/mordor/login")
+        {
+            Content = new StringContent(
+                "{\"email_address\":\"rxxxxx\",\"password\":\"xxxxxxxx\"}",
+                Encoding.UTF8,
+                "application/json")
+        };
+        // Act
+        var response = await _fixture.Client.SendAsync(request).WaitAsync(TimeSpan.FromSeconds(5));
+        // Assert
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Disallow_Core_Request_Unauthorized()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/mordor/core");
+        // Act
+        var response = await _fixture.Client.SendAsync(request).WaitAsync(TimeSpan.FromSeconds(5));
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Disallow_Request_With_Expired_Token()
+    {
+        var auth = new Auth
+        {
+            Email = "rxxxxx",
+            EmployeeID = 123
+        };
+        var configValues = _fixture.ServiceProvider.GetService<IMordorConfigurationService>();
+        var key = Encoding.ASCII.GetBytes(configValues.GetConfigurationValue("JwtKey"));
+        var audience = configValues.GetConfigurationValue("JwtAudience");
+        var issuer = configValues.GetConfigurationValue("JwtIssuer");
+        var tokenDesciptor =
+            new JwtHelper(_fixture.ServiceProvider.GetService<IMordorConfigurationService>() ?? throw new Exception(""))
+                .GenerateTokenDescriptor(auth, key, issuer, audience);
+        tokenDesciptor.NotBefore = DateTime.UtcNow.AddMinutes(-10);
+        tokenDesciptor.Expires = DateTime.UtcNow.AddMinutes(-5);
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDesciptor);
+        var tokenString = tokenHandler.WriteToken(token);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/mordor/core");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenString);
+        // Act
+        var response = await _fixture.Client.SendAsync(request).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+}

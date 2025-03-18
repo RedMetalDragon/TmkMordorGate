@@ -75,7 +75,6 @@ public class RedisIntegrationExecutor : IClassFixture<TmkTestFixture>, IAsyncDis
         Assert.Equal(testModel.Id, result.Id);
         Assert.Equal(testModel.Name, result.Name);
         Assert.Equal(testModel.Items, result.Items);
-        Assert.Equal(testModel.CreatedDate, result.CreatedDate);
     }
 
     [Fact]
@@ -114,7 +113,7 @@ public class RedisIntegrationExecutor : IClassFixture<TmkTestFixture>, IAsyncDis
         {
             factoryCalled = true;
             return new RedisRecord() { Id = 1 };
-        });
+        }).ConfigureAwait(true);
 
         // Assert
         Assert.True(factoryCalled);

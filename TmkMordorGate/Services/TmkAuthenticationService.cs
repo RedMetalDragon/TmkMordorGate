@@ -1,6 +1,10 @@
-﻿using System.Net;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using TmkMordorGate.Config.Interfaces;
 using TmkMordorGate.Helpers;
 using TmkMordorGate.Models;
 using TmkMordorGate.Repositories.Interfaces;
@@ -10,7 +14,8 @@ namespace TmkMordorGate.Services;
 
 public class TmkAuthenticationService(
     IAuthenticationAuthorizationRepository authenticationAuthorizationRepository,
-    IMordorConfigurationService configurationService) : IAuthenticationService
+    IMordorConfigurationService configurationService,
+    IBlackListTokenService _blackListTokenService) : IAuthenticationService
 {
     /// <summary>
     /// Authenticates a user based on the provided email and password.
@@ -53,5 +58,42 @@ public class TmkAuthenticationService(
         var token = new JwtHelper(configurationService).GenerateJwtToken(auth);
         var authenticatedResponse = new AuthenticadedResponse(token, email, employeeId);
         return new OkObjectResult(authenticatedResponse);
+    }
+
+    public async Task<bool> IsAuthenticated(HttpContext context)
+    {
+        // Ensure an Authorization header exists
+        if (!context.Request.Headers.TryGetValue("Authorization", out var authHeader))
+            return false;
+        // Extract the token from the Authorization header
+        var tokenStr = authHeader.ToString().Replace("Bearer ", string.Empty);
+        // Ensure the token is not null or empty
+        if (string.IsNullOrWhiteSpace(tokenStr))
+            return false;
+        // Check if the token is blacklisted
+        if (_blackListTokenService.IsBlacklisted(tokenStr))
+            return false;
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        try
+        {
+            // Validate token using token parameters obtained from configurationService
+            var key = Encoding.ASCII.GetBytes(configurationService.GetConfigurationValue("JwtKey"));
+            tokenHandler.ValidateToken(tokenStr, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+            }, out SecurityToken validatedToken);
+
+            return true;
+        }
+        catch
+        {
+            // Token validation failed
+            return false;
+        }
     }
 }

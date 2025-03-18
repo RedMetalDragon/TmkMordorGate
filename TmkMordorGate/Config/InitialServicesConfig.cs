@@ -328,13 +328,14 @@ namespace TmkMordorGate.Config
         public static void ConfigureMiddlewares(this WebApplication app)
         {
             app.UseHttpsRedirection();
+            app.MapControllers();
+            app.MapReverseProxy();
             app.UseRouting();
             app.MapHealthChecks("/health");
-            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseMiddleware<DynamicAuthenticationMiddleware>();
-            app.UseMiddleware<DynamicAuthorizationMiddleware>();
-            app.MapReverseProxy();
-            app.MapControllers();
+            //app.UseMiddleware<DynamicAuthorizationMiddleware>();
+            //app.UseMiddleware<RequestLoggingMiddleware>();
+            
             app.Use(async (context, next) =>
             {
                 Console.WriteLine($"Request Path: {context.Request.Path}");
