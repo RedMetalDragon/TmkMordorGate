@@ -36,7 +36,7 @@ namespace TmkMordorGate.Config
             {
                 Console.WriteLine("Staging/Production environment detected");
                 builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
-                ProductionServicesConfig.Configure(builder);
+                ConfigurationRunner.SetupStagingConfigurationPreBuild(builder);
             }
         }
     }
