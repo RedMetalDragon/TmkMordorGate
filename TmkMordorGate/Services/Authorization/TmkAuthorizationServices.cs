@@ -3,15 +3,8 @@ using TmkMordorGate.Services.Interfaces;
 
 namespace TmkMordorGate.Services.Authorization;
 
-public class TmkAuthorizationServices: IAuthorizationService
+public class TmkAuthorizationServices : IAuthorizationService
 {
-    //private readonly IAuthenticationAuthorizationRepository _accessControlRepository;
-
-    // public TmkAuthorizationServices(IAuthenticationAuthorizationRepository accessControlRepository)
-    // {
-    //     _accessControlRepository = accessControlRepository;
-    // }
-
     public string GetServiceTarget()
     {
         return "TmkAuthorizationServices";
@@ -19,6 +12,6 @@ public class TmkAuthorizationServices: IAuthorizationService
 
     Task<bool> IAuthorizationService.Authorize(HttpContext context)
     {
-        return Task.FromResult(false);
+        return Task.FromResult(context.Request.Headers.ContainsKey("Authorization"));
     }
 }

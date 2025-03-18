@@ -1,32 +1,34 @@
+using Microsoft.Extensions.DependencyInjection;
+using TmkMordorGate.DbContext;
+using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGateTest.Setup;
 
 namespace TmkMordorGateTest.IntegrationTests;
 
-using Xunit;
-
-public class DbTestExecutor
+public class DbIntegrationExecutor : IClassFixture<TmkTestFixture>
 {
-    private readonly TmkIntegrationTestSetup _integrationTestSetup;
+    private TmkTestFixture _testFixture;
 
-    public DbTestExecutor()
+    public DbIntegrationExecutor(TmkTestFixture fixture)
     {
-        _integrationTestSetup = new TmkIntegrationTestSetup();
+        _testFixture = fixture;
     }
-
+    
     [Fact]
     public void TestDatabaseConnection()
     {
-        var context = _integrationTestSetup.DbContext;
+        using var scope = _testFixture.ServiceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<TimeKeeperDbContext>();
         var canConnect = context.Database.CanConnect();
-        // Assert
         Assert.True(canConnect, "Unable to connect to the database.");
     }
 
     [Fact]
     public async Task TestGetNullForNotFoundUserById()
     {
-        var repository = _integrationTestSetup.AccessControlRepository;
-        var invalidEmail = _integrationTestSetup._configuration.GetSection("TestData:InvalidUserEmail").Value;
+        var testContext = new TmkTestFixture();
+        var repository = testContext.GetAccessControlRepository();
+        var invalidEmail = testContext.Configuration.GetSection("TestData:InvalidUserEmail").Value;
         if (invalidEmail != null)
         {
             var result = await repository.GetUser("test@email.com");
@@ -37,18 +39,17 @@ public class DbTestExecutor
         {
             Assert.Fail("Invalid user email not found in test settings (JSON file)");
         }
-        
     }
-
+    
     [Fact]
     public async Task TestGetUserByEmail()
     {
-        var repository = _integrationTestSetup.AccessControlRepository;
-        var validEmail = _integrationTestSetup._configuration.GetSection("TestData:ValidUserEmail").Value;
+        using var scope = _testFixture.ServiceProvider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IAuthenticationAuthorizationRepository>();
+        var validEmail = _testFixture.Configuration.GetSection("TestData:ValidUserEmail").Value;
         if (validEmail != null)
         {
             var result = await repository.GetUser(validEmail);
-            // Assert
             Assert.NotNull(result);
         }
         else

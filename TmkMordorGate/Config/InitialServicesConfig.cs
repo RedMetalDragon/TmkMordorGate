@@ -11,6 +11,8 @@ using TmkMordorGate.Repositories.Interfaces;
 using TmkMordorGate.Services;
 using TmkMordorGate.Services.Interfaces;
 using Yarp.ReverseProxy.LoadBalancing;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using StackExchange.Redis;
 
 namespace TmkMordorGate.Config
 {
@@ -18,15 +20,11 @@ namespace TmkMordorGate.Config
     {
         public static void ConfigureInitialServices(this WebApplicationBuilder builder)
         {
-            // Configure base services common to all environments
-            builder.Services.AddBaseServices();
-
             // Select environment-specific configuration
             if (builder.Environment.EnvironmentName == "Local")
             {
                 Console.WriteLine("Local development environment detected");
-                builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-                LocalServicesConfig.Configure(builder);
+                ConfigurationRunner.SetupLocalConfigurationPreBuild(builder);
             }
             else if (builder.Environment.IsDevelopment())
             {
@@ -40,16 +38,6 @@ namespace TmkMordorGate.Config
                 builder.Configuration.AddJsonFile("appsettings.Staging.json", optional: true, reloadOnChange: true);
                 ProductionServicesConfig.Configure(builder);
             }
-        }
-
-        public static void ConfigureMiddlewares(this IApplicationBuilder app)
-        {
-            app.UseMiddleware<RequestLoggingMiddleware>();
-            app.UseRouting();
-            app.UseHttpsRedirection();
-            app.UseMiddleware<CustomAuthenticationMiddleware>();
-            app.UseSetHeaderInGandalfMiddleware();
-            app.UseAuthorization();
         }
     }
 
@@ -87,6 +75,21 @@ namespace TmkMordorGate.Config
         {
             services.AddReverseProxy().LoadFromConfig(configuration.GetSection("ReverseProxy"));
         }
+
+        public static void AddRedisCache(this IServiceCollection services, IMordorConfigurationService configuration)
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                var redisSettings = configuration.GetRedisCacheSettings();
+                options.Configuration = $"{redisSettings.Host}:{redisSettings.Port},password={redisSettings.Password}";
+                options.ConfigurationOptions = new ConfigurationOptions()
+                {
+                    Password = redisSettings.Password,
+                    AbortOnConnectFail = true,
+                    EndPoints = { options.Configuration }
+                };
+            });
+        }
     }
 
     /// <summary>
@@ -98,14 +101,13 @@ namespace TmkMordorGate.Config
         {
             // Reverse proxy & rate limiter
             builder.Services.AddReverseProxyServices(builder.Configuration);
-            builder.Services.AddRateLimiterServices();
-            builder.Services.AddEndpointsApiExplorer();
-
-            // Register Mordor configuration service
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
             builder.Services.AddScoped<IMordorPickerDestinationsService, MordorConfigurationService>();
             builder.Services.AddSingleton<ILoadBalancingPolicy, LoadBalancer>();
-
+            builder.Services.AddRateLimiterServices();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider()
+                .GetRequiredService<IMordorConfigurationService>());
             // Configure Authentication
             builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
             BuildAndConfigureAuthentication(builder);
@@ -117,19 +119,18 @@ namespace TmkMordorGate.Config
                 var mordorConfig = sp.GetRequiredService<IMordorConfigurationService>();
                 var dbSettings = mordorConfig.GetDatabaseSettings();
                 options.UseMySql(
-                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password).ConnectionString,
+                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
+                        .ConnectionString,
                     new MySqlServerVersion(new Version(8, 0, 27)));
             });
 
-            // JWT Authorization
-            builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-            });
+            //JWT Authorization
+            builder.Services.AddAuthorizationBuilder()
+                .AddPolicy("Authenticated", policy => { policy.RequireAuthenticatedUser(); });
             builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
             builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
-            // Register custom authorization services
-            RegisterAuthorizationServices(builder);
+            //Register custom authorization services
+            BuildAndConfigureAuthorization(builder);
         }
 
         private static void BuildAndConfigureAuthentication(WebApplicationBuilder builder)
@@ -141,32 +142,43 @@ namespace TmkMordorGate.Config
             }
         }
 
-        private static void RegisterAuthorizationServices(WebApplicationBuilder builder)
+        private static void BuildAndConfigureAuthorization(WebApplicationBuilder builder)
         {
             builder.Services.AddSingleton<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
-            var authorizationFactory = new AuthorizationFactory(builder.Services.BuildServiceProvider());
+            builder.Services.AddSingleton<IAuthorizationFactory, AuthorizationFactory>();
+            var authorizationFactory =
+                builder.Services.BuildServiceProvider().GetRequiredService<IAuthorizationFactory>();
             var authorizationInstances = builder.Configuration.GetSection("AuthorizationInstances").GetChildren();
 
             foreach (var instance in authorizationInstances)
             {
                 var className = instance.GetValue<string>("Name");
+                var targetRoute = instance.GetValue<string>("Route");
                 if (string.IsNullOrEmpty(className))
                 {
                     throw new ArgumentException("Class name cannot be null or empty", nameof(className));
                 }
-                if (!authorizationFactory.IsValidServiceType(className))
+
+                if (string.IsNullOrEmpty(targetRoute))
                 {
-                    Console.WriteLine($"Invalid class name {className} cannot be used");
-                    continue;
+                    throw new ArgumentException("Target route cannot be null or empty", nameof(targetRoute));
                 }
-                var authService = authorizationFactory.CreateAuthorizationService(className);
+
+                // if (!authorizationFactory as AuthorizationFactory).IsValidServiceType(className))
+                // {
+                //     Console.WriteLine($"Invalid class name {className} cannot be used");
+                //     continue;
+                // }
                 try
                 {
-                    builder.Services.AddSingleton<IAuthorizationService>(authService);
+                    //TODO: Put a Func<string, bool> predicate to check if the class name matches the desired criteria
+                    // we have actually a dummy predicate here
+                    var authorizationInstance =
+                        authorizationFactory.CreateAuthorizationInstance((s => s.Length > 0), className, targetRoute);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error creating instance of {className}: {e.Message}");
+                    Console.WriteLine(e);
                     throw;
                 }
             }
@@ -184,6 +196,9 @@ namespace TmkMordorGate.Config
             builder.Services.AddScoped<IMordorConfigurationService, MordorConfigurationService>();
             builder.Services.AddRateLimiterServices();
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider()
+                .GetRequiredService<IMordorConfigurationService>());
 
             // Register custom authorization services (if needed)
             RegisterAuthorizationServices(builder);
@@ -201,12 +216,14 @@ namespace TmkMordorGate.Config
                 {
                     throw new ArgumentException("Class name cannot be null or empty", nameof(className));
                 }
+
                 if (!authorizationFactory.IsValidServiceType(className))
                 {
                     Console.WriteLine($"Invalid class name {className} cannot be used");
                     continue;
                 }
-                var authService = authorizationFactory.CreateAuthorizationService(className);
+
+                var authService = authorizationFactory.CreateAuthorizationInstance(className);
                 try
                 {
                     builder.Services.AddSingleton<IAuthorizationService>(authService);
@@ -234,6 +251,8 @@ namespace TmkMordorGate.Config
             // Register Mordor configuration & authentication services
             builder.Services.AddSingleton<IMordorConfigurationService, MordorConfigurationService>();
             builder.Services.AddSingleton<IAuthenticationConfiguration, ConfigAuthentication>();
+            builder.Services.AddRedisCache(builder.Services.BuildServiceProvider()
+                .GetRequiredService<IMordorConfigurationService>());
             BuildAndConfigureAuthentication(builder);
 
             // Database registration
@@ -243,15 +262,14 @@ namespace TmkMordorGate.Config
                 var mordorConfig = sp.GetRequiredService<IMordorConfigurationService>();
                 var dbSettings = mordorConfig.GetDatabaseSettings();
                 options.UseMySql(
-                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password).ConnectionString,
+                    TmkMySqlDatabaseSettings.FromJdbcUrl(dbSettings.Host, dbSettings.Username, dbSettings.Password)
+                        .ConnectionString,
                     new MySqlServerVersion(new Version(8, 0, 27)));
             });
 
             // JWT Authorization
-            builder.Services.AddAuthorizationBuilder().AddPolicy("Authenticated", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-            });
+            builder.Services.AddAuthorizationBuilder()
+                .AddPolicy("Authenticated", policy => { policy.RequireAuthenticatedUser(); });
             builder.Services.AddSingleton<IAuthenticationRepository, TmkAccessControlRepository>();
             builder.Services.AddSingleton<IAuthenticationService, TmkAuthenticationService>();
             builder.Services.AddSingleton<IAuthenticationAuthorizationRepository, TmkAccessControlRepository>();
@@ -281,12 +299,14 @@ namespace TmkMordorGate.Config
                 {
                     throw new ArgumentException("Class name cannot be null or empty", nameof(className));
                 }
+
                 if (!authorizationFactory.IsValidServiceType(className))
                 {
                     Console.WriteLine($"Invalid class name {className} cannot be used");
                     continue;
                 }
-                var authService = authorizationFactory.CreateAuthorizationService(className);
+
+                var authService = authorizationFactory.CreateAuthorizationInstance(className);
                 try
                 {
                     builder.Services.AddSingleton<IAuthorizationService>(authService);
@@ -297,6 +317,30 @@ namespace TmkMordorGate.Config
                     throw;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    ///  Middleware extensions for the WebApplication.
+    /// </summary>
+    public static class MiddlewareExtensions
+    {
+        public static void ConfigureMiddlewares(this WebApplication app)
+        {
+            app.UseHttpsRedirection();
+            app.MapControllers();
+            app.MapReverseProxy();
+            app.UseRouting();
+            app.MapHealthChecks("/health");
+            app.UseMiddleware<DynamicAuthenticationMiddleware>();
+            //app.UseMiddleware<DynamicAuthorizationMiddleware>();
+            //app.UseMiddleware<RequestLoggingMiddleware>();
+            
+            app.Use(async (context, next) =>
+            {
+                Console.WriteLine($"Request Path: {context.Request.Path}");
+                await next.Invoke();
+            });
         }
     }
 }

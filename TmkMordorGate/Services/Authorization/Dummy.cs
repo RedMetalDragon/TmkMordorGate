@@ -9,22 +9,11 @@ public class Dummy : IAuthorizationService
 {
     Task<bool> IAuthorizationService.Authorize(HttpContext context)
     {
-        return Task.FromResult(context.Request.Headers.ContainsKey("Authorization"));
-        
+        return Task.FromResult(true);
     }
 
     public string GetServiceTarget()
     {
         return "Dummy";
-    }
-
-    public Task<IActionResult> Authorize(HttpContext context)
-    {
-        var authorizedRequest = new AuthorizedRequest
-        {
-            IsAuthorized = true,
-            Message = "Request is authorized"
-        };
-        return Task.FromResult<IActionResult>(new OkObjectResult(authorizedRequest));
     }
 }
