@@ -148,6 +148,7 @@ public class MordorConfigurationService : IMordorConfigurationService, IMordorPi
     /// </summary>
     public IEnumerable<string> GetArrayOfConfigurationValue(string arrayKeyPrefix)
     {
+        // TODO: THIS method is marked to review
         var allConfigKeys = GetAllKeys();
         var arrayKeys = allConfigKeys.Where(x => x.StartsWith(arrayKeyPrefix));
         return arrayKeys.Select(GetConfigurationValue);
