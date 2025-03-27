@@ -14,7 +14,7 @@ public class DynamicAuthenticationMiddleware : IMiddleware
         IAuthenticationService authenticationService, RequestDelegate next)
     {
         _next = next;
-        _pathsToSkip = mordorConfigurationService.GetArrayOfConfigurationValue("_jwt_skip_path_");
+        _pathsToSkip = mordorConfigurationService.GetArrayOfConfigurationValue("_jwt_skip_path_").First().Split(";");
         _authenticationService = authenticationService;
     }
 
@@ -29,7 +29,12 @@ public class DynamicAuthenticationMiddleware : IMiddleware
             await _next(context);
             return;
         }
-
+        // Skip authentication for the paths defined in the configuration
+        if (_pathsToSkip.Any(path => requestPath.Contains(path)))
+        {
+            await _next(context);
+            return;
+        }
         // Skip authentication for the login route and logout route
         if (context.Request.Method == "POST" && (context.Request.Path.Value.Contains("/api/v1/mordor/login") ||
                                                  context.Request.Path.Value.Contains("/api/v1/mordor/logout")))
@@ -51,7 +56,7 @@ public class DynamicAuthenticationMiddleware : IMiddleware
             // User is not authenticated; return 401 Unauthorized.
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.Headers.Append("WWW-Authenticate", "Bearer");
-            await context.Response.WriteAsync("Unauthorized");
+            await context.Response.WriteAsync("Unauthenticated");
         }
     }
 }
