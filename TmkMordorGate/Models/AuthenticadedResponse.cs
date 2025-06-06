@@ -1,11 +1,21 @@
-﻿namespace TmkMordorGate.Models;
+﻿using System.Text.Json.Serialization;
 
-public class AuthenticadedResponse(int auth_UserID, string? auth_EmailAddress, int auth_CustomerID, string? auth_Role, string auth_Token)
+namespace TmkMordorGate.Models;
+
+/* NOTE:
+ * Properties name in json response were change to snake_case
+ * to match previous tmkBrain code which by then was already using snake_case
+ */
+public class AuthenticadedResponse
 {
-    public readonly int Auth_UserID = auth_UserID;
-    public readonly string? Auth_EmailAddress = auth_EmailAddress;
-    public readonly int Auth_CustomerID = auth_CustomerID;
-    public readonly string? Auth_Role = auth_Role;
-    public readonly string Auth_Token = auth_Token;
+    [JsonPropertyName("access_token")] public string AccessToken { get; set; }
+    public string EmailAddress { get; set; }
+    [JsonPropertyName("user_id")] public int UserId { get; set; }
 
+    public AuthenticadedResponse(string accessToken, string emailAddress, int userId)
+    {
+        AccessToken = accessToken;
+        EmailAddress = emailAddress;
+        UserId = userId;
+    }
 }

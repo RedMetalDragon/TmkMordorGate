@@ -5,7 +5,8 @@
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 .vscode/
-
+/config/*
+/TmkMordorGate.sln.DotSettings
 # Local History for Visual Studio Code
 .history/
 
@@ -15,3 +16,12 @@
 TmkMordorGate/bin/
 TmkMordorGate/obj/
 .idea/
+TmkMordorGate/Properties/launchSettings.json
+TmkMordorGateTest/bin/
+TmkMordorGateTest/obj/
+TmkMordorGateTest/appsettings.json
+TmkMordorGateTest/config/
+TmkMordorGate.sln.DotSettings.user
+TmkMordorGateTest/test_settings_local.json 
+TmkMordorGateConsole/*
+.jetclient
