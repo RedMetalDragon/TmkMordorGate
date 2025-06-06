@@ -93,8 +93,7 @@ namespace TmkMordorGateTest.Setup
             ServiceProvider.GetRequiredService<TmkAccessControlRepository>();
         
         public IServiceScope CreateScope() => ServiceProvider.CreateScope();
-
-
+        
         // Helper method to clear the Redis cache
         public async Task ClearCache()
         {
