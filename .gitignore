@@ -9,6 +9,7 @@
 /TmkMordorGate.sln.DotSettings
 # Local History for Visual Studio Code
 .history/
+/Properties
 
 # Built Visual Studio Code Extensions
 *.vsix
@@ -25,3 +26,5 @@ TmkMordorGate.sln.DotSettings.user
 TmkMordorGateTest/test_settings_local.json 
 TmkMordorGateConsole/*
 .jetclient
+/.certs
+*.env

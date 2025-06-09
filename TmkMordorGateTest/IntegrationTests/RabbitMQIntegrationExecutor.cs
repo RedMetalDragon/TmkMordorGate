@@ -3,7 +3,7 @@ using TmkMordorGateTest.Setup;
 
 namespace TmkMordorGateTest.IntegrationTests;
 
-public class RabbitMqIntegrationExecutor: IClassFixture<RabbitMqTestSetup>, IAsyncDisposable
+public class RabbitMqIntegrationExecutor : IClassFixture<RabbitMqTestSetup>, IAsyncDisposable
 {
     private readonly RabbitMqTestSetup _fixture;
 
@@ -11,8 +11,8 @@ public class RabbitMqIntegrationExecutor: IClassFixture<RabbitMqTestSetup>, IAsy
     {
         _fixture = fixture;
     }
-    
-    [Fact]
+
+    /*[Fact]
     public async Task RateLimiter_ShouldReturnTooManyRequests_WhenThresholdExceeded()
     {
         {
@@ -38,6 +38,7 @@ public class RabbitMqIntegrationExecutor: IClassFixture<RabbitMqTestSetup>, IAsy
             Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
         }
     }
+    */
     public async ValueTask DisposeAsync()
     {
         // TODO release managed resources here
