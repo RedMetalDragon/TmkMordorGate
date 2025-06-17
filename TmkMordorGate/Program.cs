@@ -4,7 +4,7 @@ using TmkMordorGate.Config.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 builder.ConfigureInitialServices();
 var app = builder.Build();
-app.ConfigureMiddlewares();
+app.TmkConfigureMiddleWares();
 
 // Instantiate the authorization factory
 // and create authorization instances
