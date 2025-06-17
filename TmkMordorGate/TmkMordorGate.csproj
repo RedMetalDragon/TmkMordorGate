@@ -13,7 +13,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
         <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.2" />
         <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
-        <PackageReference Include="TmkRabbitMqLibrary" Version="0.1.0" />
+        <PackageReference Include="TmkRabbitMqLibrary" Version="0.1.34" />
         <PackageReference Include="Yarp.ReverseProxy" Version="2.1.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     </ItemGroup>
@@ -22,6 +22,10 @@
       <Folder Include="MessageBroker\Helpers\" />
       <Folder Include="MessageBroker\Interfaces\" />
       <Folder Include="MessageBroker\Models\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
 
 </Project>
