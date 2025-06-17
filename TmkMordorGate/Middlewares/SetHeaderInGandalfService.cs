@@ -1,4 +1,5 @@
 using System.Security;
+using TmkMordorGate.Middlewares.Interfaces;
 
 namespace TmkMordorGate.Middlewares;
 

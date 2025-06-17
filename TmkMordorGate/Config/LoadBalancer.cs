@@ -34,7 +34,7 @@ namespace TmkMordorGate.Config
         /// The function `PickDestination` selects a destination state based on the provided context,
         /// cluster state, and available destinations.
         /// </summary>
-        /// /// <param name="context">The `HttpContext` parameter typically represents the current HTTP
+        /// /// <param name="context">The `HttpContext` parameter represents the current HTTP
         /// request context in ASP.NET applications. It provides access to information about the
         /// incoming HTTP request, such as headers, cookies, and query parameters.</param>
         /// <param name="cluster">ClusterState represents the current state of a cluster in the
@@ -54,6 +54,7 @@ namespace TmkMordorGate.Config
                 return availableDestinations.FirstOrDefault(destination =>
                     destinationConfigs.Any(config => config.Item1 == destination.DestinationId));
             }
+
             throw new ApplicationException("Not instance to redirected found");
         }
     }
